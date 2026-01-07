@@ -11,7 +11,10 @@ namespace japaneseVerbConjugation
             // To customize application configuration such as set high DPI settings or default font,
             // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();
-            Application.Run(new Form1());
+            Application.SetDefaultFont(
+                new Font("Yu Gothic UI", 11F)
+            );
+            Application.Run(new VerbConjugation());
         }
     }
 }
