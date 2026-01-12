@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace japaneseVerbConjugation.Models
+namespace JapaneseVerbConjugation.Models
 {
     public sealed class UserNote
     {

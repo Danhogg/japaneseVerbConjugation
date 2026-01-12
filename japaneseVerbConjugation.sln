@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36811.4 d17.14
+VisualStudioVersion = 17.14.36811.4
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "japaneseVerbConjugation", "japaneseVerbConjugation\japaneseVerbConjugation.csproj", "{0F8ABA0A-F301-4F2E-AE3F-17D2733DB3ED}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JapaneseVerbConjugation", "japaneseVerbConjugation\JapaneseVerbConjugation.csproj", "{0F8ABA0A-F301-4F2E-AE3F-17D2733DB3ED}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

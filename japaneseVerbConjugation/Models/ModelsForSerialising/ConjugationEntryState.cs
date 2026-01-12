@@ -1,9 +1,6 @@
-﻿using japaneseVerbConjugation.Enums;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using JapaneseVerbConjugation.Enums;
 
-namespace japaneseVerbConjugation.Models.ModelsForSerialising
+namespace JapaneseVerbConjugation.Models.ModelsForSerialising
 {
     public sealed class ConjugationEntryState
     {

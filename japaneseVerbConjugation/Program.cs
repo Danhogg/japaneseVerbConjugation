@@ -1,4 +1,4 @@
-namespace japaneseVerbConjugation
+namespace JapaneseVerbConjugation
 {
     internal static class Program
     {
@@ -14,7 +14,7 @@ namespace japaneseVerbConjugation
             Application.SetDefaultFont(
                 new Font("Yu Gothic UI", 11F)
             );
-            Application.Run(new VerbConjugation());
+            Application.Run(new VerbConjugationForm());
         }
     }
 }

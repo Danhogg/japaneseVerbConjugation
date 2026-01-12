@@ -1,6 +1,6 @@
-﻿using japaneseVerbConjugation.Enums;
+﻿using JapaneseVerbConjugation.Enums;
 
-namespace japaneseVerbConjugation.Models
+namespace JapaneseVerbConjugation.Models
 {
     public sealed class AppOptions
     {

@@ -1,4 +1,4 @@
-﻿namespace japaneseVerbConjugation.Enums
+﻿namespace JapaneseVerbConjugation.Enums
 {
     public enum VerbGroup
     {

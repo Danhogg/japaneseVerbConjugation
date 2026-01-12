@@ -1,4 +1,4 @@
-﻿namespace japaneseVerbConjugation.Models
+﻿namespace JapaneseVerbConjugation.Models
 {
     public sealed class VerbProgress
     {
