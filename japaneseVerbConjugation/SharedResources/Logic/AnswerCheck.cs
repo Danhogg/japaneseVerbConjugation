@@ -5,59 +5,156 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
 {
     public static class AnswerChecker
     {
-        public static ConjugationResult Check(
-            string? userInput,
-            IReadOnlyList<string> expectedAnswers,
-            AppOptions options)
+        public static ConjugationResult Check(string? userInput, IReadOnlyList<string> expectedAnswers, AppOptions options)
         {
             var input = (userInput ?? string.Empty).Trim();
             if (input.Length == 0)
                 return ConjugationResult.Unchecked;
 
-            // Filter expected by allowed script options
-            var filtered = expectedAnswers
-                .Select(a => a.Trim())
-                .Where(a => a.Length > 0)
-                .Where(a => IsAllowedByOptions(a, options))
-                .ToList();
-
-            if (filtered.Count == 0)
+            if (expectedAnswers is null || expectedAnswers.Count == 0)
                 return ConjugationResult.Incorrect;
 
-            if (filtered.Any(a => a == input))
-                return ConjugationResult.Correct;
+            // Filter expected answers based on options
+            IReadOnlyList<string> filtered = FilterExpected(expectedAnswers, options);
+            if (filtered.Count == 0)
+                filtered = expectedAnswers; // fallback: don't fail silently
 
-            // "Close" heuristic for now:
-            // - if kana is allowed and input is kana and differs by small edit distance (1),
-            //   mark close. This is intentionally conservative and cheap.
-            if (options.AllowKana && LooksLikeKana(input))
+            // Exact match wins immediately
+            foreach (var exp in filtered)
             {
-                if (filtered.Any(a => LooksLikeKana(a) && LevenshteinDistanceAtMostOne(a, input)))
+                if (string.Equals(input, exp, StringComparison.Ordinal))
+                    return ConjugationResult.Correct;
+            }
+
+            // Close match (small typo / missing char etc.)
+            foreach (var exp in filtered)
+            {
+                if (IsClose(input, exp))
                     return ConjugationResult.Close;
             }
 
             return ConjugationResult.Incorrect;
         }
 
-        private static bool IsAllowedByOptions(string answer, AppOptions options)
+        private static List<string> FilterExpected(IReadOnlyList<string> expected, AppOptions options)
         {
-            // If only Kanji allowed: reject kana-only answers.
-            // If only Kana allowed: reject answers that contain kanji.
-            // If both allowed: accept either (mixed across entries is automatically fine).
-            bool hasKanji = ContainsKanji(answer);
-            bool isKanaOnly = LooksLikeKana(answer) && !hasKanji;
+            var list = new List<string>(expected.Count);
 
-            if (options.AllowKanji && options.AllowKana)
-                return true;
+            foreach (var e in expected)
+            {
+                if (string.IsNullOrWhiteSpace(e))
+                    continue;
 
-            if (options.AllowKanji && !options.AllowKana)
-                return !isKanaOnly;
+                bool hasKanji = ContainsKanji(e);
+                bool looksKana = LooksLikeKana(e);
 
-            if (!options.AllowKanji && options.AllowKana)
-                return !hasKanji;
+                // If both allowed, take everything
+                if (options.AllowKanji && options.AllowKana)
+                {
+                    list.Add(e);
+                    continue;
+                }
 
-            // If user disables both, nothing is valid. Treat as reject all.
-            return false;
+                if (options.AllowKanji && !options.AllowKana)
+                {
+                    // Prefer kanji answers; but if the engine only produced kana, don't block learning
+                    if (hasKanji || !looksKana)
+                        list.Add(e);
+                    continue;
+                }
+
+                if (!options.AllowKanji && options.AllowKana)
+                {
+                    if (looksKana)
+                        list.Add(e);
+                    continue;
+                }
+
+                // If both are false (shouldn't happen), fallback to accept all
+                list.Add(e);
+            }
+
+            return list;
+        }
+
+        private static bool IsClose(string input, string expected)
+        {
+            // Quick win: if one is a prefix of the other and the remaining difference is tiny
+            // Example: 泳ぎませ vs 泳ぎません (missing ん)
+            if (expected.StartsWith(input, StringComparison.Ordinal))
+            {
+                var diff = expected.Length - input.Length;
+                if (diff is 1 or 2)
+                    return true;
+            }
+
+            if (input.StartsWith(expected, StringComparison.Ordinal))
+            {
+                var diff = input.Length - expected.Length;
+                if (diff is 1 or 2)
+                    return true;
+            }
+
+            // Levenshtein distance threshold (simple + predictable)
+            // Allow up to 1 edit for short strings, 2 edits for longer ones.
+            int threshold = expected.Length <= 6 ? 1 : 2;
+
+            return LevenshteinDistance(input, expected, threshold) <= threshold;
+        }
+
+        // Levenshtein with early-exit when exceeding maxDistance
+        private static int LevenshteinDistance(string a, string b, int maxDistance)
+        {
+            if (a == b) return 0;
+
+            int n = a.Length;
+            int m = b.Length;
+
+            if (Math.Abs(n - m) > maxDistance)
+                return maxDistance + 1;
+
+            // Ensure a is the shorter one for less memory
+            if (n > m)
+            {
+                (a, b) = (b, a);
+                (n, m) = (m, n);
+            }
+
+            var prev = new int[n + 1];
+            var curr = new int[n + 1];
+
+            for (int i = 0; i <= n; i++)
+                prev[i] = i;
+
+            for (int j = 1; j <= m; j++)
+            {
+                curr[0] = j;
+                int minInRow = curr[0];
+
+                char bj = b[j - 1];
+
+                for (int i = 1; i <= n; i++)
+                {
+                    int cost = a[i - 1] == bj ? 0 : 1;
+
+                    int del = prev[i] + 1;
+                    int ins = curr[i - 1] + 1;
+                    int sub = prev[i - 1] + cost;
+
+                    int val = del < ins ? del : ins;
+                    if (sub < val) val = sub;
+
+                    curr[i] = val;
+                    if (val < minInRow) minInRow = val;
+                }
+
+                if (minInRow > maxDistance)
+                    return maxDistance + 1;
+
+                (prev, curr) = (curr, prev);
+            }
+
+            return prev[n];
         }
 
         private static bool ContainsKanji(string s)
@@ -68,43 +165,5 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
                 (c >= '\u3040' && c <= '\u309F') || // hiragana
                 (c >= '\u30A0' && c <= '\u30FF') || // katakana
                 c == 'ー');
-
-        // Only detect distance <= 1 to keep it cheap + predictable
-        private static bool LevenshteinDistanceAtMostOne(string a, string b)
-        {
-            if (a == b) return true;
-            if (Math.Abs(a.Length - b.Length) > 1) return false;
-
-            // substitution case
-            if (a.Length == b.Length)
-            {
-                int diffs = 0;
-                for (int i = 0; i < a.Length; i++)
-                {
-                    if (a[i] != b[i] && ++diffs > 1) return false;
-                }
-                return diffs == 1;
-            }
-
-            // insertion/deletion case
-            // ensure a is shorter
-            if (a.Length > b.Length)
-                (a, b) = (b, a);
-
-            int iA = 0, iB = 0, edits = 0;
-            while (iA < a.Length && iB < b.Length)
-            {
-                if (a[iA] == b[iB])
-                {
-                    iA++; iB++;
-                    continue;
-                }
-
-                if (++edits > 1) return false;
-                iB++; // skip one char in longer string
-            }
-
-            return true;
-        }
     }
 }

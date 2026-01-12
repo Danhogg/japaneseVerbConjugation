@@ -4,9 +4,6 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
 {
     public static class ConjugationEngine
     {
-        // Returns one or more acceptable answers in kana/kanji forms depending on what you pass in.
-        // For now, we generate KANA only from the provided reading, and KANJI by applying the same suffix change to dictionaryForm.
-        // This is deterministic and keeps you moving without needing full dictionary integration yet.
         public static IReadOnlyList<string> Generate(
             string dictionaryForm,
             string reading,
@@ -17,14 +14,11 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
                 return [];
 
             dictionaryForm = dictionaryForm.Trim();
-            reading = reading.Trim();
+            reading = (reading ?? string.Empty).Trim();
 
-            // Irregular core support
             if (group == VerbGroup.Irregular)
                 return GenerateIrregular(dictionaryForm, reading, form);
 
-            // If we don't have reading yet, we can still conjugate by kanji suffixing,
-            // but we can't do kana correctness well. We'll still return kanji-form answer.
             var hasReading = !string.IsNullOrWhiteSpace(reading);
 
             return group switch
@@ -35,26 +29,35 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
             };
         }
 
+        // ----------------------
+        // ICHIDAN
+        // ----------------------
         private static IReadOnlyList<string> GenerateIchidan(
             string dict,
             string reading,
             bool hasReading,
             ConjugationForm form)
         {
-            // Ichidan: remove る
-            if (!dict.EndsWith("る"))
-                return []; // defensive: bad input/group mismatch
+            if (!dict.EndsWith('る'))
+                return [];
 
             string kanjiStem = dict[..^1];
-            string kanaStem = hasReading && reading.EndsWith("る") ? reading[..^1] : string.Empty;
+            string kanaStem = hasReading && reading.EndsWith('る') ? reading[..^1] : string.Empty;
+
+            // Helpers for tara based on past-plain
+            IReadOnlyList<string> PastPlain() =>
+                Pack(kanjiStem + "た", hasReading ? kanaStem + "た" : null);
 
             return form switch
             {
-                ConjugationForm.TeForm =>
-                    Pack(kanjiStem + "て", hasReading ? kanaStem + "て" : null),
+                ConjugationForm.PresentPlain =>
+                    Pack(dict, hasReading ? reading : null),
+
+                ConjugationForm.PresentPolite =>
+                    Pack(kanjiStem + "ます", hasReading ? kanaStem + "ます" : null),
 
                 ConjugationForm.PastPlain =>
-                    Pack(kanjiStem + "た", hasReading ? kanaStem + "た" : null),
+                    PastPlain(),
 
                 ConjugationForm.PastPolite =>
                     Pack(kanjiStem + "ました", hasReading ? kanaStem + "ました" : null),
@@ -65,171 +68,348 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
                 ConjugationForm.NegativePolite =>
                     Pack(kanjiStem + "ません", hasReading ? kanaStem + "ません" : null),
 
+                ConjugationForm.TeForm =>
+                    Pack(kanjiStem + "て", hasReading ? kanaStem + "て" : null),
+
+                ConjugationForm.VolitionalPlain =>
+                    Pack(kanjiStem + "よう", hasReading ? kanaStem + "よう" : null),
+
+                ConjugationForm.VolitionalPolite =>
+                    Pack(kanjiStem + "ましょう", hasReading ? kanaStem + "ましょう" : null),
+
+                ConjugationForm.ConditionalBa =>
+                    Pack(kanjiStem + "れば", hasReading ? kanaStem + "れば" : null),
+
+                ConjugationForm.ConditionalTara =>
+                    AppendSuffix(PastPlain(), "ら"),
+
+                // Potential (Ichidan): standard ～られる, common alternate ～れる
+                ConjugationForm.PotentialPlain =>
+                    PackWithAlt(
+                        primaryKanji: kanjiStem + "られる",
+                        primaryKana: hasReading ? kanaStem + "られる" : null,
+                        altKanji: kanjiStem + "れる",
+                        altKana: hasReading ? kanaStem + "れる" : null),
+
+                ConjugationForm.PotentialPolite =>
+                    PackWithAlt(
+                        primaryKanji: kanjiStem + "られます",
+                        primaryKana: hasReading ? kanaStem + "られます" : null,
+                        altKanji: kanjiStem + "れます",
+                        altKana: hasReading ? kanaStem + "れます" : null),
+
+                // Passive (Ichidan): same surface form as potential
+                ConjugationForm.PassivePlain =>
+                    Pack(kanjiStem + "られる", hasReading ? kanaStem + "られる" : null),
+
+                ConjugationForm.PassivePolite =>
+                    Pack(kanjiStem + "られます", hasReading ? kanaStem + "られます" : null),
+
+                ConjugationForm.CausativePlain =>
+                    Pack(kanjiStem + "させる", hasReading ? kanaStem + "させる" : null),
+
+                ConjugationForm.CausativePolite =>
+                    Pack(kanjiStem + "させます", hasReading ? kanaStem + "させます" : null),
+
+                ConjugationForm.CausativePassivePlain =>
+                    PackWithAlt(
+                        primaryKanji: kanjiStem + "させられる",
+                        primaryKana: hasReading ? kanaStem + "させられる" : null,
+                        altKanji: kanjiStem + "させれる",
+                        altKana: hasReading ? kanaStem + "させれる" : null),
+
+                ConjugationForm.CausativePassivePolite =>
+                    PackWithAlt(
+                        primaryKanji: kanjiStem + "させられます",
+                        primaryKana: hasReading ? kanaStem + "させられます" : null,
+                        altKanji: kanjiStem + "させれます",
+                        altKana: hasReading ? kanaStem + "させれます" : null),
+
+                // Imperative: ～ろ is common; ～よ also exists (more formal/literary)
+                ConjugationForm.Imperative =>
+                    PackWithAlt(
+                        primaryKanji: kanjiStem + "ろ",
+                        primaryKana: hasReading ? kanaStem + "ろ" : null,
+                        altKanji: kanjiStem + "よ",
+                        altKana: hasReading ? kanaStem + "よ" : null),
+
                 _ => []
             };
         }
 
+        // ----------------------
+        // GODAN
+        // ----------------------
         private static IReadOnlyList<string> GenerateGodan(
             string dict,
             string reading,
             bool hasReading,
             ConjugationForm form)
         {
-            // Godan: last kana determines transformations
-            // We need the last *kana sound*, not just the last kanji char.
-            // So we use reading for rules; if missing, we can only attempt kanji suffixing and will be incomplete.
             if (!hasReading)
-                return []; // keep it honest; you can decide later if you want partial behavior
+                return [];
 
             if (reading.Length < 1)
                 return [];
 
-            char kanaLast = reading[^1];
+            char lastKana = reading[^1];
             string kanaStem = reading[..^1];
+            string kanjiStem = dict[..^1];
 
-            // For kanji, we apply the same "remove last kana" concept by removing 1 char from dict.
-            // This is correct when dict ends in kana (e.g., 書く, ends with く). It is also common.
-            // If dict ends with kanji (rare in dictionary forms), you'll need dictionary mapping anyway.
-            string kanjiStem = dict.Length >= 1 ? dict[..^1] : string.Empty;
+            // ✅ Special-case: 行く / いく family
+            // Applies to all "iku" verbs (行く / 逝く / 往く / いく)
+            bool isIkuVerb = reading == "いく" && lastKana == 'く';
+
+            // Precompute endings once
+            string teEnding = isIkuVerb
+                ? "って"
+                : GodanRules.TeEnding(lastKana);
+
+            string pastEnding = isIkuVerb
+                ? "った"
+                : GodanRules.PastEnding(lastKana);
+
+            var pastPlain = Pack(
+                kanjiStem + pastEnding,
+                kanaStem + pastEnding);
 
             return form switch
             {
-                ConjugationForm.TeForm => Pack(
-                    kanjiStem + GodanTeEnding(kanaLast),
-                    kanaStem + GodanTeEnding(kanaLast),
-                    extraKana: GodanTeExtraKana(reading)),
+                ConjugationForm.PresentPlain =>
+                    Pack(dict, reading),
 
-                ConjugationForm.PastPlain => Pack(
-                    kanjiStem + GodanPastEnding(kanaLast),
-                    kanaStem + GodanPastEnding(kanaLast),
-                    extraKana: GodanPastExtraKana(reading)),
+                ConjugationForm.PresentPolite =>
+                    Pack(
+                        kanjiStem + GodanRules.IStem(lastKana) + "ます",
+                        kanaStem + GodanRules.IStem(lastKana) + "ます"
+                    ),
 
-                ConjugationForm.PastPolite => Pack(
-                    kanjiStem + GodanIStem(kanaLast) + "ました",
-                    kanaStem + GodanIStem(kanaLast) + "ました"),
+                ConjugationForm.TeForm =>
+                    Pack(
+                        kanjiStem + teEnding,
+                        kanaStem + teEnding
+                    ),
 
-                ConjugationForm.NegativePlain => Pack(
-                    kanjiStem + GodanAStemForNegative(kanaLast) + "ない",
-                    kanaStem + GodanAStemForNegative(kanaLast) + "ない"),
+                ConjugationForm.PastPlain =>
+                    pastPlain,
 
-                ConjugationForm.NegativePolite => Pack(
-                    kanjiStem + GodanIStem(kanaLast) + "ません",
-                    kanaStem + GodanIStem(kanaLast) + "ません"),
+                ConjugationForm.PastPolite =>
+                    Pack(
+                        kanjiStem + GodanRules.IStem(lastKana) + "ました",
+                        kanaStem + GodanRules.IStem(lastKana) + "ました"
+                    ),
+
+                ConjugationForm.NegativePlain =>
+                    Pack(
+                        kanjiStem + GodanRules.AStem(lastKana) + "ない",
+                        kanaStem + GodanRules.AStem(lastKana) + "ない"
+                    ),
+
+                ConjugationForm.NegativePolite =>
+                    Pack(
+                        kanjiStem + GodanRules.IStem(lastKana) + "ません",
+                        kanaStem + GodanRules.IStem(lastKana) + "ません"
+                    ),
+
+                ConjugationForm.VolitionalPlain =>
+                    Pack(kanjiStem + GodanRules.OStem(lastKana) + "う",
+                         kanaStem + GodanRules.OStem(lastKana) + "う"),
+
+                ConjugationForm.VolitionalPolite =>
+                    Pack(kanjiStem + GodanRules.IStem(lastKana) + "ましょう",
+                         kanaStem + GodanRules.IStem(lastKana) + "ましょう"),
+
+                ConjugationForm.ConditionalBa =>
+                    Pack(kanjiStem + GodanRules.EStem(lastKana) + "ば",
+                         kanaStem + GodanRules.EStem(lastKana) + "ば"),
+
+                ConjugationForm.ConditionalTara =>
+                    AppendSuffix(pastPlain, "ら"),
+
+                ConjugationForm.PotentialPlain =>
+                    Pack(kanjiStem + GodanRules.EStem(lastKana) + "る",
+                         kanaStem + GodanRules.EStem(lastKana) + "る"),
+
+                ConjugationForm.PotentialPolite =>
+                    Pack(kanjiStem + GodanRules.EStem(lastKana) + "ます",
+                         kanaStem + GodanRules.EStem(lastKana) + "ます"),
+
+                ConjugationForm.PassivePlain =>
+                    Pack(kanjiStem + GodanRules.AStem(lastKana) + "れる",
+                         kanaStem + GodanRules.AStem(lastKana) + "れる"),
+
+                ConjugationForm.PassivePolite =>
+                    Pack(kanjiStem + GodanRules.AStem(lastKana) + "れます",
+                         kanaStem + GodanRules.AStem(lastKana) + "れます"),
+
+                // Causative: a-stem + せる, but す => させる
+                ConjugationForm.CausativePlain =>
+                    Pack(kanjiStem + GodanCausativeBase(lastKana) + "る",
+                         kanaStem + GodanCausativeBase(lastKana) + "る"),
+
+                ConjugationForm.CausativePolite =>
+                    Pack(kanjiStem + GodanCausativeBase(lastKana) + "ます",
+                         kanaStem + GodanCausativeBase(lastKana) + "ます"),
+
+                ConjugationForm.CausativePassivePlain =>
+                    Pack(kanjiStem + GodanCausativeBase(lastKana) + "られる",
+                         kanaStem + GodanCausativeBase(lastKana) + "られる"),
+
+                ConjugationForm.CausativePassivePolite =>
+                    Pack(kanjiStem + GodanCausativeBase(lastKana) + "られます",
+                         kanaStem + GodanCausativeBase(lastKana) + "られます"),
+
+                // Imperative: e-stem only (書け、読め)
+                ConjugationForm.Imperative =>
+                    Pack(kanjiStem + GodanRules.EStem(lastKana),
+                         kanaStem + GodanRules.EStem(lastKana)),
 
                 _ => []
             };
         }
 
+        private static string GodanCausativeBase(char lastKana)
+        {
+            // Standard: a-stem + せ (then + る/ます/られる/られます)
+            // For す: させ
+            return lastKana == 'す'
+                ? "させ"
+                : GodanRules.AStem(lastKana) + "せ";
+        }
+
+        // ----------------------
+        // IRREGULAR (minimum: する / 来る)
+        // ----------------------
         private static IReadOnlyList<string> GenerateIrregular(
             string dict,
             string reading,
             ConjugationForm form)
         {
-            // Minimum required: する / 来る
-            // Accept common kanji/kana variants
-            // dict can be する, 為る (rare), 来る, くる
             bool isSuru = dict is "する" or "為る";
-            bool isKuru = dict is "来る" || dict is "くる";
+            bool isKuru = dict is "来る" or "くる";
 
             if (!isSuru && !isKuru)
-                return []; // later you can expand irregular list
+                return [];
 
             if (isSuru)
             {
                 return form switch
                 {
+                    ConjugationForm.PresentPlain => new[] { "する" },
+                    ConjugationForm.PresentPolite => new[] { "します" },
+
                     ConjugationForm.TeForm => new[] { "して" },
                     ConjugationForm.PastPlain => new[] { "した" },
                     ConjugationForm.PastPolite => new[] { "しました" },
+
                     ConjugationForm.NegativePlain => new[] { "しない" },
                     ConjugationForm.NegativePolite => new[] { "しません" },
+
+                    ConjugationForm.VolitionalPlain => new[] { "しよう" },
+                    ConjugationForm.VolitionalPolite => new[] { "しましょう" },
+
+                    ConjugationForm.ConditionalBa => new[] { "すれば" },
+                    ConjugationForm.ConditionalTara => new[] { "したら" },
+
+                    ConjugationForm.PotentialPlain => new[] { "できる" },
+                    ConjugationForm.PotentialPolite => new[] { "できます" },
+
+                    ConjugationForm.PassivePlain => new[] { "される" },
+                    ConjugationForm.PassivePolite => new[] { "されます" },
+
+                    ConjugationForm.CausativePlain => new[] { "させる" },
+                    ConjugationForm.CausativePolite => new[] { "させます" },
+
+                    ConjugationForm.CausativePassivePlain => new[] { "させられる", "させれる" },
+                    ConjugationForm.CausativePassivePolite => new[] { "させられます", "させれます" },
+
+                    ConjugationForm.Imperative => new[] { "しろ", "せよ" },
+
                     _ => []
                 };
             }
 
-            // kuru
+            // 来る / くる
             return form switch
             {
+                ConjugationForm.PresentPlain => new[] { "くる", "来る" },
+                ConjugationForm.PresentPolite => new[] { "きます", "来ます" },
+
                 ConjugationForm.TeForm => new[] { "きて", "来て" },
                 ConjugationForm.PastPlain => new[] { "きた", "来た" },
                 ConjugationForm.PastPolite => new[] { "きました", "来ました" },
+
                 ConjugationForm.NegativePlain => new[] { "こない", "来ない" },
                 ConjugationForm.NegativePolite => new[] { "きません", "来ません" },
+
+                ConjugationForm.VolitionalPlain => new[] { "こよう", "来よう" },
+                ConjugationForm.VolitionalPolite => new[] { "きましょう", "来ましょう" },
+
+                ConjugationForm.ConditionalBa => new[] { "くれば", "来れば" },
+                ConjugationForm.ConditionalTara => new[] { "きたら", "来たら" },
+
+                ConjugationForm.PotentialPlain => new[] { "こられる", "来られる" },
+                ConjugationForm.PotentialPolite => new[] { "こられます", "来られます" },
+
+                // Passive is same surface form for 来る
+                ConjugationForm.PassivePlain => new[] { "こられる", "来られる" },
+                ConjugationForm.PassivePolite => new[] { "こられます", "来られます" },
+
+                ConjugationForm.CausativePlain => new[] { "こさせる", "来させる" },
+                ConjugationForm.CausativePolite => new[] { "こさせます", "来させます" },
+
+                ConjugationForm.CausativePassivePlain => new[] { "こさせられる", "来させられる" },
+                ConjugationForm.CausativePassivePolite => new[] { "こさせられます", "来させられます" },
+
+                ConjugationForm.Imperative => new[] { "こい", "来い" },
+
                 _ => []
             };
         }
 
-        // Helpers
-
-        private static string GodanTeEnding(char lastKana) => lastKana switch
+        // ----------------------
+        // Shared helpers
+        // ----------------------
+        private static IReadOnlyList<string> AppendSuffix(IReadOnlyList<string> bases, string suffix)
         {
-            'う' or 'つ' or 'る' => "って",
-            'む' or 'ぶ' or 'ぬ' => "んで",
-            'く' => "いて",
-            'ぐ' => "いで",
-            'す' => "して",
-            _ => ""
-        };
+            if (bases.Count == 0) return [];
 
-        // Special-case: 行く te-form is いって, not いて
-        private static string? GodanTeExtraKana(string reading)
-        {
-            if (reading == "いく")
-                return "いって";
-            return null;
+            var list = new List<string>(bases.Count);
+            foreach (var b in bases)
+            {
+                var v = b + suffix;
+                if (!list.Contains(v)) list.Add(v);
+            }
+            return list;
         }
 
-        private static string GodanPastEnding(char lastKana) => lastKana switch
+        private static IReadOnlyList<string> Pack(string? kanji, string? kana = null)
         {
-            'う' or 'つ' or 'る' => "った",
-            'む' or 'ぶ' or 'ぬ' => "んだ",
-            'く' => "いた",
-            'ぐ' => "いだ",
-            'す' => "した",
-            _ => ""
-        };
-
-        private static string? GodanPastExtraKana(string reading)
-        {
-            if (reading == "いく")
-                return "いった";
-            return null;
-        }
-
-        private static string GodanIStem(char lastKana) => lastKana switch
-        {
-            'う' => "い",
-            'つ' => "ち",
-            'る' => "り",
-            'む' => "み",
-            'ぶ' => "び",
-            'ぬ' => "に",
-            'く' => "き",
-            'ぐ' => "ぎ",
-            'す' => "し",
-            _ => ""
-        };
-
-        private static string GodanAStemForNegative(char lastKana) => lastKana switch
-        {
-            'う' => "わ", // crucial: u -> wa for negative
-            'つ' => "た",
-            'る' => "ら",
-            'む' => "ま",
-            'ぶ' => "ば",
-            'ぬ' => "な",
-            'く' => "か",
-            'ぐ' => "が",
-            'す' => "さ",
-            _ => ""
-        };
-
-        private static IReadOnlyList<string> Pack(string? kanji, string? kana = null, string? extraKana = null)
-        {
-            var list = new List<string>(3);
+            var list = new List<string>(2);
             if (!string.IsNullOrWhiteSpace(kanji)) list.Add(kanji);
             if (!string.IsNullOrWhiteSpace(kana) && kana != kanji) list.Add(kana);
-            if (!string.IsNullOrWhiteSpace(extraKana) && !list.Contains(extraKana)) list.Add(extraKana);
+            return list;
+        }
+
+        private static IReadOnlyList<string> PackWithAlt(
+            string? primaryKanji,
+            string? primaryKana,
+            string? altKanji,
+            string? altKana)
+        {
+            var list = new List<string>(4);
+
+            void Add(string? s)
+            {
+                if (string.IsNullOrWhiteSpace(s)) return;
+                if (!list.Contains(s)) list.Add(s);
+            }
+
+            Add(primaryKanji);
+            Add(primaryKana);
+            Add(altKanji);
+            Add(altKana);
+
             return list;
         }
     }
