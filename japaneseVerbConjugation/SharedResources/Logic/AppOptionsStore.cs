@@ -70,5 +70,19 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
         {
             WriteIndented = true
         };
+
+        /// <summary>
+        /// Compares two AppOptions instances for equality.
+        /// </summary>
+        public static bool AreEqual(AppOptions a, AppOptions b)
+        {
+            if (a.ShowFurigana != b.ShowFurigana) return false;
+            if (a.AllowHiragana != b.AllowHiragana) return false;
+            if (a.FocusModeOnly != b.FocusModeOnly) return false;
+            if (a.PersistUserAnswers != b.PersistUserAnswers) return false;
+
+            // HashSet comparison
+            return a.EnabledConjugations.SetEquals(b.EnabledConjugations);
+        }
     }
 }

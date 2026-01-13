@@ -361,3 +361,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Refactoring analysis documentation (temporary analysis file)
+REFACTORING_ANALYSIS.md
