@@ -22,6 +22,9 @@ namespace JapaneseVerbConjugation.Models
         // Track if verb group has been answered correctly
         public bool VerbGroupAnsweredCorrectly { get; set; } = false;
 
+        // Track which verb is currently active (the one being studied)
+        public bool Active { get; set; } = false;
+
         public UserNote? UserNotes { get; set; }
     }
 }

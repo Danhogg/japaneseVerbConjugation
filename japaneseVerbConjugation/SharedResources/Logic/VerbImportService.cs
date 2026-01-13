@@ -62,6 +62,9 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
                 store.Verbs.Select(v => StringNormalization.NormalizeKey(v.DictionaryForm ?? string.Empty)),
                 StringComparer.Ordinal);
 
+            // Check if there's already an active verb
+            bool hasActiveVerb = store.Verbs.Any(v => v.Active);
+
             // Calculate total verbs to attempt (excluding header)
             int totalVerbsToProcess = lines.Count - 1;
             onRow?.Invoke(new RowImportEvent(RowStatus.Summary, string.Empty, $"Attempting to import {totalVerbsToProcess} verbs from {Path.GetFileName(filePath)}"));
@@ -167,6 +170,8 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
                     Group = group, // VerbGroupEnum: Ichidan, Godan, or Irregular
                     Meaning = null,
                     JLPTLevel = jlptLevel,
+                    // Set first verb as active if no active verb exists
+                    Active = !hasActiveVerb && added == 0
                 };
 
                 // Log a sample of what we're saving for verification

@@ -52,7 +52,9 @@ namespace JapaneseVerbConjugation
             // Now load the verb - entry states and controls already exist from RebuildConjugationRows
             if (_verbStore.Verbs.Count > 0)
             {
-                LoadNextVerb(_verbStore.Verbs[0]);
+                // Find the active verb, or use the first one if none is active
+                var activeVerb = _verbStore.Verbs.FirstOrDefault(v => v.Active) ?? _verbStore.Verbs[0];
+                LoadNextVerb(activeVerb);
             }
             else
             {
@@ -187,6 +189,18 @@ namespace JapaneseVerbConjugation
             // if (nextVerb == null) => load a random verb from storage
             ArgumentNullException.ThrowIfNull(nextVerb);
 
+            // Update active verb if it's different from the one we're loading
+            if (_currentVerb?.Id != nextVerb.Id)
+            {
+                // Deactivate all verbs, then activate the one we're loading
+                foreach (var verb in _verbStore.Verbs)
+                {
+                    verb.Active = false;
+                }
+                nextVerb.Active = true;
+                VerbStoreStore.Save(_verbStore);
+            }
+
             _currentVerb = nextVerb;
 
             // UI label only
@@ -226,6 +240,28 @@ namespace JapaneseVerbConjugation
                 _currentVerb,
                 _appOptions,
                 SetVerbGroupState);
+
+            // Update navigation button states
+            UpdateNavigationButtonStates();
+        }
+
+        /// <summary>
+        /// Updates the enabled state of Prev/Next buttons based on current verb position.
+        /// </summary>
+        private void UpdateNavigationButtonStates()
+        {
+            if (_currentVerb is null || _verbStore.Verbs.Count == 0)
+            {
+                prevVerbButton.Enabled = false;
+                nextVerbButton.Enabled = false;
+                return;
+            }
+
+            int currentIndex = _verbStore.Verbs.FindIndex(v => v.Id == _currentVerb.Id);
+            
+            // Disable Prev if at first verb, disable Next if at last verb
+            prevVerbButton.Enabled = currentIndex > 0;
+            nextVerbButton.Enabled = currentIndex >= 0 && currentIndex < _verbStore.Verbs.Count - 1;
         }
 
         private Dictionary<ConjugationFormEnum, IReadOnlyList<string>> BuildExpectedAnswersForCurrentVerb()
@@ -260,11 +296,62 @@ namespace JapaneseVerbConjugation
             if (currentIndex < 0)
                 return;
 
-            // Get next verb (wrap around to start if at end)
-            int nextIndex = (currentIndex + 1) % _verbStore.Verbs.Count;
+            // Don't go past the last verb
+            if (currentIndex >= _verbStore.Verbs.Count - 1)
+                return;
+
+            // Deactivate current verb
+            _currentVerb.Active = false;
+
+            // Get next verb
+            int nextIndex = currentIndex + 1;
             var nextVerb = _verbStore.Verbs[nextIndex];
 
+            // Activate the next verb
+            nextVerb.Active = true;
+            VerbStoreStore.Save(_verbStore);
+
             LoadNextVerb(nextVerb);
+            
+            // Refresh UI controls to show the new verb's state
+            foreach (var c in conjugationTableLayout.Controls)
+            {
+                if (c is ConjugationEntryControl control)
+                {
+                    control.RefreshFromState();
+                }
+            }
+        }
+
+        private void SkipToPreviousVerb(object sender, EventArgs e)
+        {
+            if (_currentVerb is null || _verbStore.Verbs.Count == 0)
+                return;
+
+            // Save all current answers before moving to previous verb
+            PersistAllCurrentAnswers();
+
+            // Find current verb index
+            int currentIndex = _verbStore.Verbs.FindIndex(v => v.Id == _currentVerb.Id);
+            if (currentIndex < 0)
+                return;
+
+            // Don't go before the first verb
+            if (currentIndex <= 0)
+                return;
+
+            // Deactivate current verb
+            _currentVerb.Active = false;
+
+            // Get previous verb
+            int prevIndex = currentIndex - 1;
+            var prevVerb = _verbStore.Verbs[prevIndex];
+
+            // Activate the previous verb
+            prevVerb.Active = true;
+            VerbStoreStore.Save(_verbStore);
+
+            LoadNextVerb(prevVerb);
             
             // Refresh UI controls to show the new verb's state
             foreach (var c in conjugationTableLayout.Controls)
@@ -282,7 +369,14 @@ namespace JapaneseVerbConjugation
             checkVerbGroupButton.Enabled = enabled;
             optionsButton.Enabled = enabled;
             verbGroup.Enabled = enabled;
+            prevVerbButton.Enabled = enabled;
             nextVerbButton.Enabled = enabled;
+            
+            // Update navigation button states based on position if enabled
+            if (enabled)
+            {
+                UpdateNavigationButtonStates();
+            }
         }
 
         private void ClearAnswers(object sender, EventArgs e)
@@ -592,11 +686,13 @@ namespace JapaneseVerbConjugation
             using var form = new ImportPacksForm(RunImport, customPath);
             form.ShowDialog(this);
 
-            // Unlock + load first verb only if we were empty before
+            // Unlock + load active verb only if we were empty before
             if (verbStoreEmptyBeforeImport && _verbStore.Verbs.Count > 0)
             {
                 SetStudyUiEnabled(true);
-                LoadNextVerb(_verbStore.Verbs[0]);
+                // Find the active verb (should be the first one imported)
+                var activeVerb = _verbStore.Verbs.FirstOrDefault(v => v.Active) ?? _verbStore.Verbs[0];
+                LoadNextVerb(activeVerb);
             }
         }
 

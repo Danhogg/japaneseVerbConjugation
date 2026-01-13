@@ -364,3 +364,6 @@ FodyWeavers.xsd
 
 # Refactoring analysis documentation (temporary analysis file)
 REFACTORING_ANALYSIS.md
+
+# Release build output folder (build artifacts)
+Release/

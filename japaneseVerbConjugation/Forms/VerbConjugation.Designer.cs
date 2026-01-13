@@ -32,8 +32,9 @@
             controlFlowButtons = new TableLayoutPanel();
             optionsButton = new Button();
             importButton = new Button();
-            nextVerbButton = new Button();
             clearButton = new Button();
+            prevVerbButton = new Button();
+            nextVerbButton = new Button();
             dictionaryTableLayout.SuspendLayout();
             dictionaryFormAndReadingLayout.SuspendLayout();
             verbGroup.SuspendLayout();
@@ -193,16 +194,18 @@
             // 
             // controlFlowButtons
             // 
-            controlFlowButtons.ColumnCount = 4;
+            controlFlowButtons.ColumnCount = 5;
             controlFlowButtons.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100F));
             controlFlowButtons.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            controlFlowButtons.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100F));
             controlFlowButtons.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100F));
             controlFlowButtons.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100F));
             controlFlowButtons.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 20F));
             controlFlowButtons.Controls.Add(optionsButton, 0, 0);
             controlFlowButtons.Controls.Add(importButton, 1, 0);
-            controlFlowButtons.Controls.Add(nextVerbButton, 3, 0);
             controlFlowButtons.Controls.Add(clearButton, 2, 0);
+            controlFlowButtons.Controls.Add(prevVerbButton, 3, 0);
+            controlFlowButtons.Controls.Add(nextVerbButton, 4, 0);
             controlFlowButtons.Location = new Point(3, 518);
             controlFlowButtons.Name = "controlFlowButtons";
             controlFlowButtons.RowCount = 1;
@@ -236,6 +239,18 @@
             importButton.UseVisualStyleBackColor = true;
             importButton.Click += ShowImportDialog;
             // 
+            // prevVerbButton
+            // 
+            prevVerbButton.Anchor = AnchorStyles.Right;
+            prevVerbButton.Font = new Font("Yu Gothic UI", 12F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            prevVerbButton.Location = new Point(701, 21);
+            prevVerbButton.Name = "prevVerbButton";
+            prevVerbButton.Size = new Size(90, 36);
+            prevVerbButton.TabIndex = 7;
+            prevVerbButton.Text = "Prev Verb";
+            prevVerbButton.UseVisualStyleBackColor = true;
+            prevVerbButton.Click += SkipToPreviousVerb;
+            // 
             // nextVerbButton
             // 
             nextVerbButton.Anchor = AnchorStyles.Right;
@@ -243,7 +258,7 @@
             nextVerbButton.Location = new Point(801, 21);
             nextVerbButton.Name = "nextVerbButton";
             nextVerbButton.Size = new Size(90, 36);
-            nextVerbButton.TabIndex = 7;
+            nextVerbButton.TabIndex = 8;
             nextVerbButton.Text = "Next Verb";
             nextVerbButton.UseVisualStyleBackColor = true;
             nextVerbButton.Click += SkipToNextVerb;
@@ -252,10 +267,10 @@
             // 
             clearButton.Anchor = AnchorStyles.Right;
             clearButton.Font = new Font("Yu Gothic UI", 12F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            clearButton.Location = new Point(701, 21);
+            clearButton.Location = new Point(601, 21);
             clearButton.Name = "clearButton";
             clearButton.Size = new Size(90, 36);
-            clearButton.TabIndex = 8;
+            clearButton.TabIndex = 6;
             clearButton.Text = "Clear";
             clearButton.UseVisualStyleBackColor = true;
             clearButton.Click += ClearAnswers;
@@ -293,7 +308,8 @@
         private TableLayoutPanel controlFlowButtons;
         private Button optionsButton;
         private Button importButton;
-        private Button nextVerbButton;
         private Button clearButton;
+        private Button prevVerbButton;
+        private Button nextVerbButton;
     }
 }

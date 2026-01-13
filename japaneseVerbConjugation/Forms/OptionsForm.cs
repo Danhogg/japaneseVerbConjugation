@@ -6,7 +6,7 @@ namespace JapaneseVerbConjugation.Forms
 {
     public sealed class OptionsForm : Form
     {
-        private readonly CheckBox _showFurigana = new() { Text = "Show furigana" };
+        private readonly CheckBox _showFurigana = new() { Text = "Show Furigana" };
         private readonly CheckBox _allowHiragana = new() { Text = "Allow Hiragana" };
         private readonly CheckBox _focusOnly = new() { Text = "Focus mode only" };
         private readonly CheckBox _persistAnswers = new() { Text = "Persist user answers" };
@@ -63,6 +63,12 @@ namespace JapaneseVerbConjugation.Forms
                 AutoSize = true,
                 WrapContents = false
             };
+
+            // Ensure checkboxes can display full text
+            _showFurigana.AutoSize = true;
+            _allowHiragana.AutoSize = true;
+            _focusOnly.AutoSize = true;
+            _persistAnswers.AutoSize = true;
 
             top.Controls.Add(_showFurigana);
             top.Controls.Add(_allowHiragana);
