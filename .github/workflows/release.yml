@@ -18,6 +18,9 @@ jobs:
       with:
         dotnet-version: '8.0.x'
         
+    - name: Test
+      run: dotnet test japaneseVerbConjugation.sln -c Release --verbosity normal
+        
     - name: Build and Create Release
       shell: pwsh
       run: |
