@@ -35,9 +35,13 @@ if (Test-Path $outputPath) {
     Remove-Item $outputPath -Recurse -Force
 }
 
-# Build and test first
-Write-Host "Building solution and running tests..." -ForegroundColor Yellow
-dotnet test --configuration Release
+# Clean all configurations to avoid cached Debug builds
+Write-Host "Cleaning solution (all configurations)..." -ForegroundColor Yellow
+dotnet clean --configuration Debug 2>&1 | Out-Null
+dotnet clean --configuration Release
+
+Write-Host "Building and running tests in Release mode..." -ForegroundColor Yellow
+dotnet test --configuration Release --verbosity minimal
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Tests failed! Aborting build." -ForegroundColor Red
     exit 1
