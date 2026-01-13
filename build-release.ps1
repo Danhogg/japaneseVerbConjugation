@@ -35,13 +35,37 @@ if (Test-Path $outputPath) {
     Remove-Item $outputPath -Recurse -Force
 }
 
-# Clean all configurations to avoid cached Debug builds
+# Clean all configurations thoroughly to avoid cached Debug builds
 Write-Host "Cleaning solution (all configurations)..." -ForegroundColor Yellow
-dotnet clean --configuration Debug 2>&1 | Out-Null
-dotnet clean --configuration Release
+dotnet clean japaneseVerbConjugation.sln --configuration Debug 2>&1 | Out-Null
+dotnet clean japaneseVerbConjugation.sln --configuration Release
 
-Write-Host "Building and running tests in Release mode..." -ForegroundColor Yellow
-dotnet test --configuration Release --verbosity minimal
+# Remove bin and obj folders manually to ensure clean state
+Write-Host "Removing bin and obj folders..." -ForegroundColor Yellow
+Get-ChildItem -Path . -Recurse -Directory -Filter "bin" | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+Get-ChildItem -Path . -Recurse -Directory -Filter "obj" | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+
+# Build the solution first in Release mode
+Write-Host "Building solution in Release mode..." -ForegroundColor Yellow
+dotnet build japaneseVerbConjugation.sln --configuration Release --no-incremental
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Build failed!" -ForegroundColor Red
+    exit 1
+}
+
+# Verify test DLL exists in Release folder
+$testDllPath = "japaneseVerbConjugationTests\bin\Release\net8.0-windows\japaneseVerbConjugationTests.dll"
+if (-not (Test-Path $testDllPath)) {
+    Write-Host "ERROR: Test DLL not found at expected Release path: $testDllPath" -ForegroundColor Red
+    Write-Host "Checking for test DLL in other locations..." -ForegroundColor Yellow
+    Get-ChildItem -Path "japaneseVerbConjugationTests" -Recurse -Filter "*.dll" | Select-Object FullName
+    exit 1
+}
+Write-Host "Test DLL found at: $testDllPath" -ForegroundColor Green
+
+# Now run tests - they should use the Release build we just created
+Write-Host "Running tests from Release build..." -ForegroundColor Yellow
+dotnet test japaneseVerbConjugation.sln --configuration Release --no-build --verbosity normal
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Tests failed! Aborting build." -ForegroundColor Red
     exit 1
