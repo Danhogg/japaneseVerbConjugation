@@ -14,9 +14,12 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
             public List<string> Errors { get; init; } = [];
         }
 
-        public static ImportResult ImportFromDelimitedFile(string filePath, VerbStore store)
+        public static ImportResult ImportFromDelimitedFile(
+            string filePath,
+            VerbStore store,
+            Action<RowImportEvent>? onRow = null)
         {
-            if (store is null) throw new ArgumentNullException(nameof(store));
+            ArgumentNullException.ThrowIfNull(store);
             if (string.IsNullOrWhiteSpace(filePath)) throw new ArgumentNullException(nameof(filePath));
             if (!File.Exists(filePath)) throw new FileNotFoundException("Import file not found.", filePath);
 
@@ -59,15 +62,21 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
                 var cols = SplitLine(lines[i], delimiter);
 
                 string dict = GetCol(cols, map, "dictionaryform").Trim();
+
                 if (string.IsNullOrWhiteSpace(dict))
                 {
-                    // skip blank required
+                    // Missing required field -> error (red)
+                    var msg = $"Row {i + 1}: missing DictionaryForm (skipped)";
+                    result.Errors.Add(msg);
+                    onRow?.Invoke(new RowImportEvent(RowStatus.Error, string.Empty, msg));
                     continue;
                 }
 
                 if (existing.Contains(dict))
                 {
+                    // Duplicate -> orange
                     result.SkippedDuplicates.Add(dict);
+                    onRow?.Invoke(new RowImportEvent(RowStatus.Duplicate, dict, $"Duplicate skipped: {dict}"));
                     continue;
                 }
 
@@ -75,7 +84,6 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
                 string groupRaw = GetCol(cols, map, "group").Trim();
                 string meaning = GetCol(cols, map, "meaning").Trim();
 
-                // Group is recommended. If missing, default to Godan (you can choose to error instead).
                 VerbGroupEnum group;
                 try
                 {
@@ -83,11 +91,11 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
                 }
                 catch (Exception ex)
                 {
-                    result.Errors.Add($"Row {i + 1}: invalid Group '{groupRaw}' ({ex.Message})");
+                    var msg = $"Row {i + 1}: invalid Group '{groupRaw}' for '{dict}' (skipped)";
+                    result.Errors.Add($"{msg} ({ex.Message})");
+                    onRow?.Invoke(new RowImportEvent(RowStatus.Error, dict, msg));
                     continue;
                 }
-
-                // You said you'll ensure kana-only is sensible, so we won't do ambiguity checks now.
 
                 var jlptLevel = filePath.ToLowerInvariant() switch
                 {
@@ -98,10 +106,11 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
                     var s when s.Contains("n1") => JLPTLevelEnum.N1,
                     _ => JLPTLevelEnum.NotSpecified,
                 };
+
                 var verb = new Verb
                 {
                     DictionaryForm = dict,
-                    Reading = string.IsNullOrWhiteSpace(reading) ? dict : reading, // safe fallback (better: require)
+                    Reading = string.IsNullOrWhiteSpace(reading) ? dict : reading,
                     Group = group,
                     Meaning = string.IsNullOrWhiteSpace(meaning) ? null : meaning,
                     JLPTLevel = jlptLevel,
@@ -110,6 +119,8 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
                 store.Verbs.Add(verb);
                 existing.Add(dict);
                 added++;
+
+                onRow?.Invoke(new RowImportEvent(RowStatus.Added, dict, $"Added: {dict}"));
             }
 
             return new ImportResult
@@ -136,8 +147,7 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
             {
                 var key = (header[i] ?? string.Empty).Trim().ToLowerInvariant();
                 if (key.Length == 0) continue;
-                if (!map.ContainsKey(key))
-                    map.Add(key, i);
+                map.TryAdd(key, i);
             }
 
             return map;
@@ -192,7 +202,7 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
             }
 
             list.Add(current.ToString());
-            return list.ToArray();
+            return [.. list];
         }
 
         private static VerbGroupEnum ParseVerbGroup(string raw, VerbGroupEnum defaultIfMissing)
@@ -209,6 +219,10 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
 
             throw new FormatException("Expected Godan/Ichidan/Irregular (or 5/1/3).");
         }
+
+        public enum RowStatus { Added, Duplicate, Error }
+
+        public readonly record struct RowImportEvent(RowStatus Status, string DictionaryForm, string Message);
     }
 }
 

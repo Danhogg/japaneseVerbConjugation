@@ -59,8 +59,6 @@ namespace JapaneseVerbConjugation
 
             bool showFuriganaChanged = oldOptions.ShowFurigana != newOptions.ShowFurigana;
 
-            bool allowHiraganaChanged = oldOptions.AllowHiragana != newOptions.AllowHiragana;
-
             bool focusModeChanged = oldOptions.FocusModeOnly != newOptions.FocusModeOnly;
 
             bool persistAnswersChanged = oldOptions.PersistUserAnswers != newOptions.PersistUserAnswers;
@@ -76,9 +74,6 @@ namespace JapaneseVerbConjugation
                 UpdateVisibilityOfFuriganaReading();
             // Furigana display can be applied
             // For now currentVerb is dictionary form only, so nothing else to do here yet.
-
-            //if (allowHiraganaChanged)
-            //    ApplyAnswerPolicyUi(); // can be empty for now
 
             if (focusModeChanged || startUp)
                 ApplyFocusFilter(); // later; can be empty for now
@@ -307,11 +302,11 @@ namespace JapaneseVerbConjugation
         private static string MaskHint(string answer)
         {
             // keep kanji, mask hiragana, leave punctuation as-is
-            return new string(answer.Select(c =>
+            return new string([.. answer.Select(c =>
             {
                 bool isHiragana = c >= '\u3040' && c <= '\u309F';
                 return isHiragana ? '＊' : c;
-            }).ToArray());
+            })]);
         }
 
         private static string MaskAnswer(string s)
@@ -366,61 +361,52 @@ namespace JapaneseVerbConjugation
 
         private void ShowImportDialog(object? sender, EventArgs e)
         {
-            using var form = new ImportPacksForm();
+            _verbStore ??= VerbStoreStore.LoadOrCreateDefault();
 
-            if (form.ShowDialog(this) != DialogResult.OK)
-                return;
+            var customPath = CustomCsvStore.EnsureExists();
 
-            var filesToImport = new List<string>();
-
-            if (form.ImportN5)
-                filesToImport.Add(Path.Combine(AppContext.BaseDirectory, "Data", "N5.csv"));
-
-            if (form.ImportN4)
-                filesToImport.Add(Path.Combine(AppContext.BaseDirectory, "Data", "N4.csv"));
-
-            if (form.ImportCustom)
-                filesToImport.Add(Path.Combine(AppContext.BaseDirectory, "Data", "custom.csv"));
-
-            // Remove missing files (and report)
-            var missing = filesToImport.Where(f => !File.Exists(f)).ToList();
-            filesToImport = [.. filesToImport.Where(File.Exists)];
-
-            if (filesToImport.Count == 0)
+            void RunImport(ImportSelection sel, Action<ImportLogLine> log)
             {
-                MessageBox.Show(this, "No valid import files were selected.", "Import", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
+                var files = new List<string>();
+
+                if (sel.ImportN5) files.Add(Path.Combine(AppContext.BaseDirectory, "Data", "N5.csv"));
+                if (sel.ImportN4) files.Add(Path.Combine(AppContext.BaseDirectory, "Data", "N4.csv"));
+                if (sel.ImportCustom) files.Add(sel.CustomPath);
+
+                foreach (var file in files)
+                {
+                    if (!File.Exists(file))
+                    {
+                        log(new ImportLogLine($"Missing file: {file}", ImportLogColour.Error));
+                        continue;
+                    }
+
+                    log(new ImportLogLine($"Importing: {Path.GetFileName(file)}", ImportLogColour.Neutral));
+
+                    VerbImportService.ImportFromDelimitedFile(file, _verbStore, ev =>
+                    {
+                        log(ev.Status switch
+                        {
+                            VerbImportService.RowStatus.Added =>
+                                new ImportLogLine(ev.Message, ImportLogColour.Added),
+
+                            VerbImportService.RowStatus.Duplicate =>
+                                new ImportLogLine(ev.Message, ImportLogColour.Duplicate),
+
+                            VerbImportService.RowStatus.Error =>
+                                new ImportLogLine(ev.Message, ImportLogColour.Error),
+
+                            _ =>
+                                new ImportLogLine(ev.Message, ImportLogColour.Neutral),
+                        });
+                    });
+
+                    VerbStoreStore.Save(_verbStore);
+                }
             }
 
-            int totalAdded = 0;
-            int totalRows = 0;
-            var dupes = new List<string>();
-            var errors = new List<string>();
-
-            foreach (var file in filesToImport)
-            {
-                var res = VerbImportService.ImportFromDelimitedFile(file, _verbStore);
-                totalAdded += res.AddedCount;
-                totalRows += res.TotalRows;
-                dupes.AddRange(res.SkippedDuplicates);
-                errors.AddRange(res.Errors);
-            }
-
-            VerbStoreStore.Save(_verbStore);
-
-            var summary =
-                $"Files imported: {filesToImport.Count}\n" +
-                $"Rows processed: {totalRows}\n" +
-                $"Added: {totalAdded}\n" +
-                $"Duplicates skipped: {dupes.Count}\n" +
-                $"Errors: {errors.Count}";
-
-            if (missing.Count > 0)
-                summary += $"\n\nMissing files:\n- {string.Join("\n- ", missing.Select(Path.GetFileName))}";
-
-            MessageBox.Show(this, summary, "Import complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-            // Optional: if you want, refresh your “next verb” pool here
+            using var form = new ImportPacksForm(RunImport, customPath);
+            form.ShowDialog(this);
         }
     }
 }
