@@ -4,6 +4,9 @@ on:
   push:
     tags:
       - 'v*'  # Triggers on tags like v1.1.0, v2.0.0, etc.
+    paths:
+      - '.github/workflows/release.yml'  # Re-run when workflow file changes
+  workflow_dispatch:  # Allows manual triggering from GitHub Actions UI
 
 jobs:
   build-and-release:
