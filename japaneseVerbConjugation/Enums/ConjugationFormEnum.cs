@@ -1,6 +1,6 @@
 ﻿namespace JapaneseVerbConjugation.Enums
 {
-    public enum ConjugationForm
+    public enum ConjugationFormEnum
     {
         Dictionary,
 
@@ -9,8 +9,6 @@
 
         PastPlain,
         PastPolite,
-
-        TeForm,
 
         NegativePlain,
         NegativePolite,
@@ -33,6 +31,7 @@
         CausativePassivePlain,
         CausativePassivePolite,
 
+        TeForm,
         Imperative
     }
 }

@@ -4,38 +4,38 @@ namespace JapaneseVerbConjugation.SharedResources.Methods
 {
     public static class ConjugationFormExtensions
     {
-        public static string ToDisplayLabel(this ConjugationForm form) => form switch
+        public static string ToDisplayLabel(this ConjugationFormEnum form) => form switch
         {
-            ConjugationForm.PresentPlain => "Present (Plain)",
-            ConjugationForm.PresentPolite => "Present (Polite)",
+            ConjugationFormEnum.PresentPlain => "Present (Plain)",
+            ConjugationFormEnum.PresentPolite => "Present (Polite)",
 
-            ConjugationForm.PastPlain => "Past (Plain)",
-            ConjugationForm.PastPolite => "Past (Polite)",
+            ConjugationFormEnum.PastPlain => "Past (Plain)",
+            ConjugationFormEnum.PastPolite => "Past (Polite)",
 
-            ConjugationForm.TeForm => "Te-form",
+            ConjugationFormEnum.TeForm => "Te-form",
 
-            ConjugationForm.NegativePlain => "Negative (Plain)",
-            ConjugationForm.NegativePolite => "Negative (Polite)",
+            ConjugationFormEnum.NegativePlain => "Negative (Plain)",
+            ConjugationFormEnum.NegativePolite => "Negative (Polite)",
 
-            ConjugationForm.VolitionalPlain => "Volitional (Plain)",
-            ConjugationForm.VolitionalPolite => "Volitional (Polite)",
+            ConjugationFormEnum.VolitionalPlain => "Volitional (Plain)",
+            ConjugationFormEnum.VolitionalPolite => "Volitional (Polite)",
 
-            ConjugationForm.ConditionalBa => "Conditional (ば)",
-            ConjugationForm.ConditionalTara => "Conditional (たら)",
+            ConjugationFormEnum.ConditionalBa => "Conditional (ば)",
+            ConjugationFormEnum.ConditionalTara => "Conditional (たら)",
 
-            ConjugationForm.PotentialPlain => "Potential (Plain)",
-            ConjugationForm.PotentialPolite => "Potential (Polite)",
+            ConjugationFormEnum.PotentialPlain => "Potential (Plain)",
+            ConjugationFormEnum.PotentialPolite => "Potential (Polite)",
 
-            ConjugationForm.PassivePlain => "Passive (Plain)",
-            ConjugationForm.PassivePolite => "Passive (Polite)",
+            ConjugationFormEnum.PassivePlain => "Passive (Plain)",
+            ConjugationFormEnum.PassivePolite => "Passive (Polite)",
 
-            ConjugationForm.CausativePlain => "Causative (Plain)",
-            ConjugationForm.CausativePolite => "Causative (Polite)",
+            ConjugationFormEnum.CausativePlain => "Causative (Plain)",
+            ConjugationFormEnum.CausativePolite => "Causative (Polite)",
 
-            ConjugationForm.CausativePassivePlain => "Causative-Passive (Plain)",
-            ConjugationForm.CausativePassivePolite => "Causative-Passive (Polite)",
+            ConjugationFormEnum.CausativePassivePlain => "Causative-Passive (Plain)",
+            ConjugationFormEnum.CausativePassivePolite => "Causative-Passive (Polite)",
 
-            ConjugationForm.Imperative => "Imperative",
+            ConjugationFormEnum.Imperative => "Imperative",
 
             _ => form.ToString()
         };

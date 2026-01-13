@@ -29,10 +29,14 @@
             五段 = new RadioButton();
             conjugationScrollPanel = new Panel();
             conjugationTableLayout = new TableLayoutPanel();
+            controlFlowButtons = new TableLayoutPanel();
+            options = new Button();
+            import = new Button();
             dictionaryTableLayout.SuspendLayout();
             dictionaryFormAndReadingLayout.SuspendLayout();
             verbGroup.SuspendLayout();
             conjugationScrollPanel.SuspendLayout();
+            controlFlowButtons.SuspendLayout();
             SuspendLayout();
             // 
             // dictionaryTableLayout
@@ -41,6 +45,7 @@
             dictionaryTableLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             dictionaryTableLayout.Controls.Add(dictionaryFormAndReadingLayout, 0, 0);
             dictionaryTableLayout.Controls.Add(conjugationScrollPanel, 0, 1);
+            dictionaryTableLayout.Controls.Add(controlFlowButtons, 0, 2);
             dictionaryTableLayout.Dock = DockStyle.Fill;
             dictionaryTableLayout.Location = new Point(0, 0);
             dictionaryTableLayout.Name = "dictionaryTableLayout";
@@ -48,6 +53,7 @@
             dictionaryTableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 34.3333321F));
             dictionaryTableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 51.5F));
             dictionaryTableLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 13.9534893F));
+            dictionaryTableLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 20F));
             dictionaryTableLayout.Size = new Size(900, 600);
             dictionaryTableLayout.TabIndex = 2;
             // 
@@ -68,6 +74,7 @@
             dictionaryFormAndReadingLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 33.3333321F));
             dictionaryFormAndReadingLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 62F));
             dictionaryFormAndReadingLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
+            dictionaryFormAndReadingLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 20F));
             dictionaryFormAndReadingLayout.Size = new Size(900, 206);
             dictionaryFormAndReadingLayout.TabIndex = 2;
             // 
@@ -184,11 +191,52 @@
             conjugationTableLayout.Size = new Size(894, 0);
             conjugationTableLayout.TabIndex = 6;
             // 
-            // VerbConjugation
+            // controlFlowButtons
+            // 
+            controlFlowButtons.ColumnCount = 4;
+            controlFlowButtons.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100F));
+            controlFlowButtons.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            controlFlowButtons.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100F));
+            controlFlowButtons.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100F));
+            controlFlowButtons.Controls.Add(options, 0, 0);
+            controlFlowButtons.Controls.Add(import, 1, 0);
+            controlFlowButtons.Location = new Point(3, 518);
+            controlFlowButtons.Name = "controlFlowButtons";
+            controlFlowButtons.RowCount = 1;
+            controlFlowButtons.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            controlFlowButtons.Size = new Size(894, 79);
+            controlFlowButtons.TabIndex = 4;
+            // 
+            // options
+            // 
+            options.Anchor = AnchorStyles.Left;
+            options.Font = new Font("Yu Gothic UI", 12F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            options.Location = new Point(10, 21);
+            options.Margin = new Padding(10, 3, 3, 3);
+            options.Name = "options";
+            options.Size = new Size(75, 36);
+            options.TabIndex = 5;
+            options.Text = "Options";
+            options.UseVisualStyleBackColor = true;
+            // 
+            // import
+            // 
+            import.Anchor = AnchorStyles.Left;
+            import.Font = new Font("Yu Gothic UI", 12F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            import.Location = new Point(110, 21);
+            import.Margin = new Padding(10, 3, 3, 3);
+            import.Name = "import";
+            import.Size = new Size(75, 36);
+            import.TabIndex = 6;
+            import.Text = "Import";
+            import.UseVisualStyleBackColor = true;
+            import.Click += ShowImportDialog;
+            // 
+            // VerbConjugationForm
             // 
             ClientSize = new Size(900, 600);
             Controls.Add(dictionaryTableLayout);
-            Name = "VerbConjugation";
+            Name = "VerbConjugationForm";
             Text = "Verb Conjugation";
             dictionaryTableLayout.ResumeLayout(false);
             dictionaryFormAndReadingLayout.ResumeLayout(false);
@@ -197,6 +245,7 @@
             verbGroup.PerformLayout();
             conjugationScrollPanel.ResumeLayout(false);
             conjugationScrollPanel.PerformLayout();
+            controlFlowButtons.ResumeLayout(false);
             ResumeLayout(false);
         }
 
@@ -213,5 +262,8 @@
         private Label currentVerb;
         private Panel conjugationScrollPanel;
         private TableLayoutPanel conjugationTableLayout;
+        private TableLayoutPanel controlFlowButtons;
+        private Button options;
+        private Button import;
     }
 }

@@ -5,14 +5,14 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
 {
     public static class AnswerChecker
     {
-        public static ConjugationResult Check(string? userInput, IReadOnlyList<string> expectedAnswers, AppOptions options)
+        public static ConjugationResultEnum Check(string? userInput, IReadOnlyList<string> expectedAnswers, AppOptions options)
         {
             var input = (userInput ?? string.Empty).Trim();
             if (input.Length == 0)
-                return ConjugationResult.Unchecked;
+                return ConjugationResultEnum.Unchecked;
 
             if (expectedAnswers is null || expectedAnswers.Count == 0)
-                return ConjugationResult.Incorrect;
+                return ConjugationResultEnum.Incorrect;
 
             // Filter expected answers based on options
             IReadOnlyList<string> filtered = FilterExpected(expectedAnswers, options);
@@ -23,17 +23,17 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
             foreach (var exp in filtered)
             {
                 if (string.Equals(input, exp, StringComparison.Ordinal))
-                    return ConjugationResult.Correct;
+                    return ConjugationResultEnum.Correct;
             }
 
             // Close match (small typo / missing char etc.)
             foreach (var exp in filtered)
             {
                 if (IsClose(input, exp))
-                    return ConjugationResult.Close;
+                    return ConjugationResultEnum.Close;
             }
 
-            return ConjugationResult.Incorrect;
+            return ConjugationResultEnum.Incorrect;
         }
 
         private static List<string> FilterExpected(IReadOnlyList<string> expected, AppOptions options)
@@ -45,30 +45,16 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
                 if (string.IsNullOrWhiteSpace(e))
                     continue;
 
-                bool hasKanji = ContainsKanji(e);
-                bool looksKana = LooksLikeKana(e);
-
-                // If both allowed, take everything
-                if (options.AllowKanji && options.AllowKana)
-                {
-                    list.Add(e);
+                if (string.IsNullOrWhiteSpace(e))
                     continue;
-                }
 
-                if (options.AllowKanji && !options.AllowKana)
-                {
-                    // Prefer kanji answers; but if the engine only produced kana, don't block learning
-                    if (hasKanji || !looksKana)
-                        list.Add(e);
+                // Katakana is never valid
+                if (ContainsKatakana(e))
                     continue;
-                }
 
-                if (!options.AllowKanji && options.AllowKana)
-                {
-                    if (looksKana)
-                        list.Add(e);
+                // Hiragana only allowed if explicitly enabled
+                if (IsHiraganaOnly(e) && !options.AllowHiragana)
                     continue;
-                }
 
                 // If both are false (shouldn't happen), fallback to accept all
                 list.Add(e);
@@ -160,10 +146,10 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
         private static bool ContainsKanji(string s)
             => s.Any(c => c >= '\u4E00' && c <= '\u9FFF');
 
-        private static bool LooksLikeKana(string s)
-            => s.All(c =>
-                (c >= '\u3040' && c <= '\u309F') || // hiragana
-                (c >= '\u30A0' && c <= '\u30FF') || // katakana
-                c == 'ー');
+        private static bool IsHiraganaOnly(string s)
+            => s.All(c => c >= '\u3040' && c <= '\u309F');
+
+        private static bool ContainsKatakana(string s)
+            => s.Any(c => c >= '\u30A0' && c <= '\u30FF');
     }
 }

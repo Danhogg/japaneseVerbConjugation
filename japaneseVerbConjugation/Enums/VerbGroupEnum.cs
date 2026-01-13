@@ -1,6 +1,6 @@
 ﻿namespace JapaneseVerbConjugation.Enums
 {
-    public enum VerbGroup
+    public enum VerbGroupEnum
     {
         Godan = 1,
         Ichidan = 2,

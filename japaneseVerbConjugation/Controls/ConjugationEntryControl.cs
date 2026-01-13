@@ -99,21 +99,21 @@ namespace JapaneseVerbConjugation.Controls
         {
             switch (ConjugationEntryState.Result)
             {
-                case ConjugationResult.Correct:
+                case ConjugationResultEnum.Correct:
                     _resultLabel.Text = "✓";
                     _resultLabel.ForeColor = ColourConstants.LabelCorrectColour;
                     _inputTextArea.BackColor = ColourConstants.TextAreaCorrectColour;
                     _inputTextArea.BorderStyle = BorderStyle.FixedSingle;
                     break;
 
-                case ConjugationResult.Incorrect:
+                case ConjugationResultEnum.Incorrect:
                     _resultLabel.Text = "✗";
                     _resultLabel.ForeColor = ColourConstants.LabelIncorrectColour;
                     _inputTextArea.BackColor = ColourConstants.TextAreaIncorrectColour;
                     _inputTextArea.BorderStyle = BorderStyle.FixedSingle;
                     break;
 
-                case ConjugationResult.Close:
+                case ConjugationResultEnum.Close:
                     _resultLabel.Text = "~";
                     _resultLabel.ForeColor = ColourConstants.LabelCloseColour;
                     _inputTextArea.BackColor = ColourConstants.TextAreaCloseColour;
@@ -128,7 +128,7 @@ namespace JapaneseVerbConjugation.Controls
                     break;
             }
 
-            _checkButton.Enabled = ConjugationEntryState.Result != ConjugationResult.Correct;
+            _checkButton.Enabled = ConjugationEntryState.Result != ConjugationResultEnum.Correct;
         }
     }
 }

@@ -1,10 +1,13 @@
 ﻿using JapaneseVerbConjugation.Controls;
 using JapaneseVerbConjugation.Enums;
+using JapaneseVerbConjugation.Forms;
 using JapaneseVerbConjugation.Models;
 using JapaneseVerbConjugation.Models.ModelsForSerialising;
 using JapaneseVerbConjugation.SharedResources.Constants;
 using JapaneseVerbConjugation.SharedResources.Logic;
 using JapaneseVerbConjugation.SharedResources.Methods;
+using System.Collections.Generic;
+using System.Security.Cryptography;
 
 namespace JapaneseVerbConjugation
 {
@@ -16,18 +19,12 @@ namespace JapaneseVerbConjugation
 
         // This is our list of expected answers for the current verb. Will also be used for
         // the hints and answers if a user needs help.
-        private Dictionary<ConjugationForm, IReadOnlyList<string>> _expectedAnswers = [];
+        private Dictionary<ConjugationFormEnum, IReadOnlyList<string>> _expectedAnswers = [];
 
         // AppOptions loaded from user settings.
-        private AppOptions _appOptions = new()
-        {
-            AllowKanji = true,
-            AllowKana = false,
-            PersistUserAnswers = false,
-            FocusModeOnly = false,
-            ShowFurigana = false,
-            EnabledConjugations = [] // leave empty for now; your UI will control this later
-        };
+        private AppOptions _appOptions;
+
+        private VerbStore _verbStore;
 
         private Verb _currentVerb = new();
 
@@ -35,9 +32,11 @@ namespace JapaneseVerbConjugation
         {
             InitializeComponent();
             MinimumSize = new Size(950, 600);
-            conjugationTableLayout.SuspendLayout();
-            WireUpDynamicContent();
-            conjugationTableLayout.ResumeLayout();
+
+            _appOptions = AppOptionsStore.LoadOrCreateDefault();
+            _verbStore = VerbStoreStore.LoadOrCreateDefault();
+
+            ApplyUserOptions(_appOptions, true);
 
             //This is hard coded for testing purposes only
             // when the app loads verbs from storage we will load the last verb the user was
@@ -47,48 +46,85 @@ namespace JapaneseVerbConjugation
                 DictionaryForm = "泳ぐ",
                 Reading = "およぐ",
                 Group =
-                VerbGroup.Godan
+                VerbGroupEnum.Godan
             });
         }
 
-        private void WireUpDynamicContent()
+        private void ApplyUserOptions(AppOptions newOptions, bool startUp = false)
         {
-            //TODO this will be updated to check the users app settings for which conjugations
-            // we need to display. It will also need to be called to update when the user changes
-            // their settings
-            AddConjugationEntry(ConjugationForm.PresentPlain);
-            AddConjugationEntry(ConjugationForm.PresentPolite);
+            var oldOptions = _appOptions;
 
-            AddConjugationEntry(ConjugationForm.PastPlain);
-            AddConjugationEntry(ConjugationForm.PastPolite);
+            bool enabledConjugationsChanged =
+                !oldOptions.EnabledConjugations.SetEquals(newOptions.EnabledConjugations);
 
-            AddConjugationEntry(ConjugationForm.NegativePlain);
-            AddConjugationEntry(ConjugationForm.NegativePolite);
+            bool showFuriganaChanged = oldOptions.ShowFurigana != newOptions.ShowFurigana;
 
-            AddConjugationEntry(ConjugationForm.VolitionalPlain);
-            AddConjugationEntry(ConjugationForm.VolitionalPolite);
+            bool allowHiraganaChanged = oldOptions.AllowHiragana != newOptions.AllowHiragana;
 
-            AddConjugationEntry(ConjugationForm.ConditionalBa);
-            AddConjugationEntry(ConjugationForm.ConditionalTara);
+            bool focusModeChanged = oldOptions.FocusModeOnly != newOptions.FocusModeOnly;
 
-            AddConjugationEntry(ConjugationForm.PotentialPlain);
-            AddConjugationEntry(ConjugationForm.PotentialPolite);
+            bool persistAnswersChanged = oldOptions.PersistUserAnswers != newOptions.PersistUserAnswers;
 
-            AddConjugationEntry(ConjugationForm.PassivePlain);
-            AddConjugationEntry(ConjugationForm.PassivePolite);
+            // Store first (so any subsequent logic reads the new options)
+            _appOptions = newOptions;
 
-            AddConjugationEntry(ConjugationForm.CausativePlain);
-            AddConjugationEntry(ConjugationForm.CausativePolite);
+            // Rebuild rows to match enabled conjugations
+            if (enabledConjugationsChanged || startUp)
+                RebuildConjugationRows();
 
-            AddConjugationEntry(ConjugationForm.CausativePassivePlain);
-            AddConjugationEntry(ConjugationForm.CausativePassivePolite);
+            if (showFuriganaChanged || startUp)
+                UpdateVisibilityOfFuriganaReading();
+            // Furigana display can be applied
+            // For now currentVerb is dictionary form only, so nothing else to do here yet.
 
-            AddConjugationEntry(ConjugationForm.TeForm);
+            //if (allowHiraganaChanged)
+            //    ApplyAnswerPolicyUi(); // can be empty for now
 
-            AddConjugationEntry(ConjugationForm.Imperative);
+            if (focusModeChanged || startUp)
+                ApplyFocusFilter(); // later; can be empty for now
+
+            if (persistAnswersChanged || startUp)
+                ApplyPersistencePolicyUi(); // probably nothing visual
         }
 
-        private void AddConjugationEntry(ConjugationForm form)
+        private void RebuildConjugationRows()
+        {
+            conjugationTableLayout.SuspendLayout();
+
+            conjugationTableLayout.Controls.Clear();
+            conjugationTableLayout.RowStyles.Clear();
+            conjugationTableLayout.RowCount = 0;
+
+            _entryStates.Clear();
+
+            var enabled = _appOptions.EnabledConjugations;
+
+            // If nothing enabled, show nothing (or you can add a placeholder label)
+            foreach (var form in Enum.GetValues<ConjugationFormEnum>())
+            {
+                if (!enabled.Contains(form))
+                    continue;
+
+                AddConjugationEntry(form);
+            }
+
+            _expectedAnswers = BuildExpectedAnswersForCurrentVerb();
+            conjugationTableLayout.ResumeLayout();
+        }
+
+        private void UpdateVisibilityOfFuriganaReading()
+        {
+            dictionaryTableLayout.SuspendLayout();
+            conjugationTableLayout.SuspendLayout();
+            furiganaReading.Visible = _appOptions.ShowFurigana;
+            conjugationTableLayout.ResumeLayout();
+            dictionaryTableLayout.ResumeLayout();
+        }
+
+        private void ApplyFocusFilter() { }
+        private void ApplyPersistencePolicyUi() { }
+
+        private void AddConjugationEntry(ConjugationFormEnum form)
         {
             var entry = new ConjugationEntryState
             {
@@ -131,7 +167,7 @@ namespace JapaneseVerbConjugation
             foreach (var entry in _entryStates)
             {
                 entry.UserInput = string.Empty;
-                entry.Result = ConjugationResult.Unchecked;
+                entry.Result = ConjugationResultEnum.Unchecked;
             }
 
             // Push reset state into controls + clear UI result styles
@@ -180,9 +216,9 @@ namespace JapaneseVerbConjugation
             // Highlight the selected guess (green if correct, red if incorrect)
             var selectedRadio = guess switch
             {
-                VerbGroup.Godan => 五段,
-                VerbGroup.Ichidan => 一段,
-                VerbGroup.Irregular => 不規則,
+                VerbGroupEnum.Godan => 五段,
+                VerbGroupEnum.Ichidan => 一段,
+                VerbGroupEnum.Irregular => 不規則,
                 _ => 五段
             };
 
@@ -210,22 +246,22 @@ namespace JapaneseVerbConjugation
             checkVerbGroup.Enabled = true;
         }
 
-        private bool TryGetSelectedVerbGroupGuess(out VerbGroup guess)
+        private bool TryGetSelectedVerbGroupGuess(out VerbGroupEnum guess)
         {
-            if (不規則.Checked) { guess = VerbGroup.Irregular; return true; }
-            if (一段.Checked) { guess = VerbGroup.Ichidan; return true; }
-            if (五段.Checked) { guess = VerbGroup.Godan; return true; }
+            if (不規則.Checked) { guess = VerbGroupEnum.Irregular; return true; }
+            if (一段.Checked) { guess = VerbGroupEnum.Ichidan; return true; }
+            if (五段.Checked) { guess = VerbGroupEnum.Godan; return true; }
 
             guess = default;
             return false;
         }
 
-        private Dictionary<ConjugationForm, IReadOnlyList<string>> BuildExpectedAnswersForCurrentVerb()
+        private Dictionary<ConjugationFormEnum, IReadOnlyList<string>> BuildExpectedAnswersForCurrentVerb()
         {
             if (_currentVerb is null)
                 throw new NullReferenceException("Current verb is not set.");
 
-            var dict = new Dictionary<ConjugationForm, IReadOnlyList<string>>();
+            var dict = new Dictionary<ConjugationFormEnum, IReadOnlyList<string>>();
 
             foreach (var state in _entryStates)
             {
@@ -244,34 +280,38 @@ namespace JapaneseVerbConjugation
             if (sender is not ConjugationEntryControl entry)
                 return;
 
-            if (_currentVerb is null)
+            var state = entry.ConjugationEntryState;
+
+            var verb = _currentVerb ?? throw new NullReferenceException("Current verb is not set.");
+
+            var expected = ConjugationEngine.Generate(
+                verb.DictionaryForm,
+                verb.Reading,
+                verb.Group,
+                state.ConjugationForm);
+
+            var full = HintAnswerPicker.PickBestForHint(expected);
+
+            if (string.IsNullOrWhiteSpace(full))
                 return;
 
-            var form = entry.ConjugationEntryState.ConjugationForm;
+            var masked = MaskHint(full);
 
-            if (!_expectedAnswers.TryGetValue(form, out var answers) || answers.Count == 0)
-            {
-                HintPopupForm.Show(this, "Hint", "No hint available.", "No hint available.", new Font("Yu Gothic UI", 12F));
-                return;
-            }
-
-            var full = PickAnswerForHint(answers);
-            var masked = MaskAnswer(full);
-
-            HintPopupForm.Show(this, $"{form.ToDisplayLabel()} hint", masked, full, new Font("Yu Gothic UI", 16F));
-        }        
-
-        private string PickAnswerForHint(IReadOnlyList<string> answers)
+            HintPopupForm.Show(
+                owner: this,
+                title: $"{state.ConjugationForm.ToDisplayLabel()}",
+                masked: masked,
+                full: full,
+                baseFont: Font);
+        }
+        private static string MaskHint(string answer)
         {
-            // Follow options: prefer kanji when kana not allowed, etc.
-            if (_appOptions.AllowKanji && !_appOptions.AllowKana)
-                return answers.FirstOrDefault(ContainsKanji) ?? answers[0];
-
-            if (!_appOptions.AllowKanji && _appOptions.AllowKana)
-                return answers.FirstOrDefault(LooksLikeKana) ?? answers[0];
-
-            // both allowed: prefer kanji if available
-            return answers.FirstOrDefault(ContainsKanji) ?? answers[0];
+            // keep kanji, mask hiragana, leave punctuation as-is
+            return new string(answer.Select(c =>
+            {
+                bool isHiragana = c >= '\u3040' && c <= '\u309F';
+                return isHiragana ? '＊' : c;
+            }).ToArray());
         }
 
         private static string MaskAnswer(string s)
@@ -294,5 +334,93 @@ namespace JapaneseVerbConjugation
                 (c >= '\u3040' && c <= '\u309F') || // hiragana
                 (c >= '\u30A0' && c <= '\u30FF') || // katakana
                 c == 'ー');
+
+        private void ChangeUserOptions(object sender, EventArgs e)
+        {
+            using var form = new OptionsForm(_appOptions);
+
+            if (form.ShowDialog(this) != DialogResult.OK)
+                return;
+
+            var newOptions = form.Result;
+
+            // If absolutely nothing changed, do nothing (no save, no flicker)
+            if (OptionsEqual(_appOptions, newOptions))
+                return;
+
+            // Persist then apply
+            AppOptionsStore.Save(newOptions);
+            ApplyUserOptions(newOptions);
+        }
+
+        private static bool OptionsEqual(AppOptions a, AppOptions b)
+        {
+            if (a.ShowFurigana != b.ShowFurigana) return false;
+            if (a.AllowHiragana != b.AllowHiragana) return false;
+            if (a.FocusModeOnly != b.FocusModeOnly) return false;
+            if (a.PersistUserAnswers != b.PersistUserAnswers) return false;
+
+            // HashSet comparison
+            return a.EnabledConjugations.SetEquals(b.EnabledConjugations);
+        }
+
+        private void ShowImportDialog(object? sender, EventArgs e)
+        {
+            using var form = new ImportPacksForm();
+
+            if (form.ShowDialog(this) != DialogResult.OK)
+                return;
+
+            var filesToImport = new List<string>();
+
+            if (form.ImportN5)
+                filesToImport.Add(Path.Combine(AppContext.BaseDirectory, "Data", "N5.csv"));
+
+            if (form.ImportN4)
+                filesToImport.Add(Path.Combine(AppContext.BaseDirectory, "Data", "N4.csv"));
+
+            if (form.ImportCustom)
+                filesToImport.Add(Path.Combine(AppContext.BaseDirectory, "Data", "custom.csv"));
+
+            // Remove missing files (and report)
+            var missing = filesToImport.Where(f => !File.Exists(f)).ToList();
+            filesToImport = [.. filesToImport.Where(File.Exists)];
+
+            if (filesToImport.Count == 0)
+            {
+                MessageBox.Show(this, "No valid import files were selected.", "Import", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            int totalAdded = 0;
+            int totalRows = 0;
+            var dupes = new List<string>();
+            var errors = new List<string>();
+
+            foreach (var file in filesToImport)
+            {
+                var res = VerbImportService.ImportFromDelimitedFile(file, _verbStore);
+                totalAdded += res.AddedCount;
+                totalRows += res.TotalRows;
+                dupes.AddRange(res.SkippedDuplicates);
+                errors.AddRange(res.Errors);
+            }
+
+            VerbStoreStore.Save(_verbStore);
+
+            var summary =
+                $"Files imported: {filesToImport.Count}\n" +
+                $"Rows processed: {totalRows}\n" +
+                $"Added: {totalAdded}\n" +
+                $"Duplicates skipped: {dupes.Count}\n" +
+                $"Errors: {errors.Count}";
+
+            if (missing.Count > 0)
+                summary += $"\n\nMissing files:\n- {string.Join("\n- ", missing.Select(Path.GetFileName))}";
+
+            MessageBox.Show(this, summary, "Import complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+            // Optional: if you want, refresh your “next verb” pool here
+        }
     }
 }

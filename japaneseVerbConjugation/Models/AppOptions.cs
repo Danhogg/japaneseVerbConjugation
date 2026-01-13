@@ -10,8 +10,7 @@ namespace JapaneseVerbConjugation.Models
         public bool ShowFurigana { get; set; } = false;
 
         // Answer checking
-        public bool AllowKanji { get; set; } = true;
-        public bool AllowKana { get; set; } = false;
+        public bool AllowHiragana { get; set; } = false;
 
         // Study filters
         public bool FocusModeOnly { get; set; } = false;
@@ -20,6 +19,9 @@ namespace JapaneseVerbConjugation.Models
         public bool PersistUserAnswers { get; set; } = false;
 
         // Enabled conjugations
-        public HashSet<ConjugationForm> EnabledConjugations { get; set; } = [];
+        // I don't like hard coding the dictionary exclusion in this way but it's simple
+        // and not that big of a deal
+        public HashSet<ConjugationFormEnum> EnabledConjugations { get; set; } 
+            = [.. Enum.GetValues<ConjugationFormEnum>().Where(form => form.ToString() != "Dictionary")];
     }
 }

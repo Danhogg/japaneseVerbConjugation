@@ -7,8 +7,8 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
         public static IReadOnlyList<string> Generate(
             string dictionaryForm,
             string reading,
-            VerbGroup group,
-            ConjugationForm form)
+            VerbGroupEnum group,
+            ConjugationFormEnum form)
         {
             if (string.IsNullOrWhiteSpace(dictionaryForm))
                 return [];
@@ -16,15 +16,15 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
             dictionaryForm = dictionaryForm.Trim();
             reading = (reading ?? string.Empty).Trim();
 
-            if (group == VerbGroup.Irregular)
+            if (group == VerbGroupEnum.Irregular)
                 return GenerateIrregular(dictionaryForm, reading, form);
 
             var hasReading = !string.IsNullOrWhiteSpace(reading);
 
             return group switch
             {
-                VerbGroup.Ichidan => GenerateIchidan(dictionaryForm, reading, hasReading, form),
-                VerbGroup.Godan => GenerateGodan(dictionaryForm, reading, hasReading, form),
+                VerbGroupEnum.Ichidan => GenerateIchidan(dictionaryForm, reading, hasReading, form),
+                VerbGroupEnum.Godan => GenerateGodan(dictionaryForm, reading, hasReading, form),
                 _ => []
             };
         }
@@ -36,7 +36,7 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
             string dict,
             string reading,
             bool hasReading,
-            ConjugationForm form)
+            ConjugationFormEnum form)
         {
             if (!dict.EndsWith('る'))
                 return [];
@@ -50,48 +50,48 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
 
             return form switch
             {
-                ConjugationForm.PresentPlain =>
+                ConjugationFormEnum.PresentPlain =>
                     Pack(dict, hasReading ? reading : null),
 
-                ConjugationForm.PresentPolite =>
+                ConjugationFormEnum.PresentPolite =>
                     Pack(kanjiStem + "ます", hasReading ? kanaStem + "ます" : null),
 
-                ConjugationForm.PastPlain =>
+                ConjugationFormEnum.PastPlain =>
                     PastPlain(),
 
-                ConjugationForm.PastPolite =>
+                ConjugationFormEnum.PastPolite =>
                     Pack(kanjiStem + "ました", hasReading ? kanaStem + "ました" : null),
 
-                ConjugationForm.NegativePlain =>
+                ConjugationFormEnum.NegativePlain =>
                     Pack(kanjiStem + "ない", hasReading ? kanaStem + "ない" : null),
 
-                ConjugationForm.NegativePolite =>
+                ConjugationFormEnum.NegativePolite =>
                     Pack(kanjiStem + "ません", hasReading ? kanaStem + "ません" : null),
 
-                ConjugationForm.TeForm =>
+                ConjugationFormEnum.TeForm =>
                     Pack(kanjiStem + "て", hasReading ? kanaStem + "て" : null),
 
-                ConjugationForm.VolitionalPlain =>
+                ConjugationFormEnum.VolitionalPlain =>
                     Pack(kanjiStem + "よう", hasReading ? kanaStem + "よう" : null),
 
-                ConjugationForm.VolitionalPolite =>
+                ConjugationFormEnum.VolitionalPolite =>
                     Pack(kanjiStem + "ましょう", hasReading ? kanaStem + "ましょう" : null),
 
-                ConjugationForm.ConditionalBa =>
+                ConjugationFormEnum.ConditionalBa =>
                     Pack(kanjiStem + "れば", hasReading ? kanaStem + "れば" : null),
 
-                ConjugationForm.ConditionalTara =>
+                ConjugationFormEnum.ConditionalTara =>
                     AppendSuffix(PastPlain(), "ら"),
 
                 // Potential (Ichidan): standard ～られる, common alternate ～れる
-                ConjugationForm.PotentialPlain =>
+                ConjugationFormEnum.PotentialPlain =>
                     PackWithAlt(
                         primaryKanji: kanjiStem + "られる",
                         primaryKana: hasReading ? kanaStem + "られる" : null,
                         altKanji: kanjiStem + "れる",
                         altKana: hasReading ? kanaStem + "れる" : null),
 
-                ConjugationForm.PotentialPolite =>
+                ConjugationFormEnum.PotentialPolite =>
                     PackWithAlt(
                         primaryKanji: kanjiStem + "られます",
                         primaryKana: hasReading ? kanaStem + "られます" : null,
@@ -99,26 +99,26 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
                         altKana: hasReading ? kanaStem + "れます" : null),
 
                 // Passive (Ichidan): same surface form as potential
-                ConjugationForm.PassivePlain =>
+                ConjugationFormEnum.PassivePlain =>
                     Pack(kanjiStem + "られる", hasReading ? kanaStem + "られる" : null),
 
-                ConjugationForm.PassivePolite =>
+                ConjugationFormEnum.PassivePolite =>
                     Pack(kanjiStem + "られます", hasReading ? kanaStem + "られます" : null),
 
-                ConjugationForm.CausativePlain =>
+                ConjugationFormEnum.CausativePlain =>
                     Pack(kanjiStem + "させる", hasReading ? kanaStem + "させる" : null),
 
-                ConjugationForm.CausativePolite =>
+                ConjugationFormEnum.CausativePolite =>
                     Pack(kanjiStem + "させます", hasReading ? kanaStem + "させます" : null),
 
-                ConjugationForm.CausativePassivePlain =>
+                ConjugationFormEnum.CausativePassivePlain =>
                     PackWithAlt(
                         primaryKanji: kanjiStem + "させられる",
                         primaryKana: hasReading ? kanaStem + "させられる" : null,
                         altKanji: kanjiStem + "させれる",
                         altKana: hasReading ? kanaStem + "させれる" : null),
 
-                ConjugationForm.CausativePassivePolite =>
+                ConjugationFormEnum.CausativePassivePolite =>
                     PackWithAlt(
                         primaryKanji: kanjiStem + "させられます",
                         primaryKana: hasReading ? kanaStem + "させられます" : null,
@@ -126,7 +126,7 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
                         altKana: hasReading ? kanaStem + "させれます" : null),
 
                 // Imperative: ～ろ is common; ～よ also exists (more formal/literary)
-                ConjugationForm.Imperative =>
+                ConjugationFormEnum.Imperative =>
                     PackWithAlt(
                         primaryKanji: kanjiStem + "ろ",
                         primaryKana: hasReading ? kanaStem + "ろ" : null,
@@ -144,7 +144,7 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
             string dict,
             string reading,
             bool hasReading,
-            ConjugationForm form)
+            ConjugationFormEnum form)
         {
             if (!hasReading)
                 return [];
@@ -175,92 +175,92 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
 
             return form switch
             {
-                ConjugationForm.PresentPlain =>
+                ConjugationFormEnum.PresentPlain =>
                     Pack(dict, reading),
 
-                ConjugationForm.PresentPolite =>
+                ConjugationFormEnum.PresentPolite =>
                     Pack(
                         kanjiStem + GodanRules.IStem(lastKana) + "ます",
                         kanaStem + GodanRules.IStem(lastKana) + "ます"
                     ),
 
-                ConjugationForm.TeForm =>
+                ConjugationFormEnum.TeForm =>
                     Pack(
                         kanjiStem + teEnding,
                         kanaStem + teEnding
                     ),
 
-                ConjugationForm.PastPlain =>
+                ConjugationFormEnum.PastPlain =>
                     pastPlain,
 
-                ConjugationForm.PastPolite =>
+                ConjugationFormEnum.PastPolite =>
                     Pack(
                         kanjiStem + GodanRules.IStem(lastKana) + "ました",
                         kanaStem + GodanRules.IStem(lastKana) + "ました"
                     ),
 
-                ConjugationForm.NegativePlain =>
+                ConjugationFormEnum.NegativePlain =>
                     Pack(
                         kanjiStem + GodanRules.AStem(lastKana) + "ない",
                         kanaStem + GodanRules.AStem(lastKana) + "ない"
                     ),
 
-                ConjugationForm.NegativePolite =>
+                ConjugationFormEnum.NegativePolite =>
                     Pack(
                         kanjiStem + GodanRules.IStem(lastKana) + "ません",
                         kanaStem + GodanRules.IStem(lastKana) + "ません"
                     ),
 
-                ConjugationForm.VolitionalPlain =>
+                ConjugationFormEnum.VolitionalPlain =>
                     Pack(kanjiStem + GodanRules.OStem(lastKana) + "う",
                          kanaStem + GodanRules.OStem(lastKana) + "う"),
 
-                ConjugationForm.VolitionalPolite =>
+                ConjugationFormEnum.VolitionalPolite =>
                     Pack(kanjiStem + GodanRules.IStem(lastKana) + "ましょう",
                          kanaStem + GodanRules.IStem(lastKana) + "ましょう"),
 
-                ConjugationForm.ConditionalBa =>
+                ConjugationFormEnum.ConditionalBa =>
                     Pack(kanjiStem + GodanRules.EStem(lastKana) + "ば",
                          kanaStem + GodanRules.EStem(lastKana) + "ば"),
 
-                ConjugationForm.ConditionalTara =>
+                ConjugationFormEnum.ConditionalTara =>
                     AppendSuffix(pastPlain, "ら"),
 
-                ConjugationForm.PotentialPlain =>
+                ConjugationFormEnum.PotentialPlain =>
                     Pack(kanjiStem + GodanRules.EStem(lastKana) + "る",
                          kanaStem + GodanRules.EStem(lastKana) + "る"),
 
-                ConjugationForm.PotentialPolite =>
+                ConjugationFormEnum.PotentialPolite =>
                     Pack(kanjiStem + GodanRules.EStem(lastKana) + "ます",
                          kanaStem + GodanRules.EStem(lastKana) + "ます"),
 
-                ConjugationForm.PassivePlain =>
+                ConjugationFormEnum.PassivePlain =>
                     Pack(kanjiStem + GodanRules.AStem(lastKana) + "れる",
                          kanaStem + GodanRules.AStem(lastKana) + "れる"),
 
-                ConjugationForm.PassivePolite =>
+                ConjugationFormEnum.PassivePolite =>
                     Pack(kanjiStem + GodanRules.AStem(lastKana) + "れます",
                          kanaStem + GodanRules.AStem(lastKana) + "れます"),
 
                 // Causative: a-stem + せる, but す => させる
-                ConjugationForm.CausativePlain =>
+                ConjugationFormEnum.CausativePlain =>
                     Pack(kanjiStem + GodanCausativeBase(lastKana) + "る",
                          kanaStem + GodanCausativeBase(lastKana) + "る"),
 
-                ConjugationForm.CausativePolite =>
+                ConjugationFormEnum.CausativePolite =>
                     Pack(kanjiStem + GodanCausativeBase(lastKana) + "ます",
                          kanaStem + GodanCausativeBase(lastKana) + "ます"),
 
-                ConjugationForm.CausativePassivePlain =>
+                ConjugationFormEnum.CausativePassivePlain =>
                     Pack(kanjiStem + GodanCausativeBase(lastKana) + "られる",
                          kanaStem + GodanCausativeBase(lastKana) + "られる"),
 
-                ConjugationForm.CausativePassivePolite =>
+                ConjugationFormEnum.CausativePassivePolite =>
                     Pack(kanjiStem + GodanCausativeBase(lastKana) + "られます",
                          kanaStem + GodanCausativeBase(lastKana) + "られます"),
 
                 // Imperative: e-stem only (書け、読め)
-                ConjugationForm.Imperative =>
+                ConjugationFormEnum.Imperative =>
                     Pack(kanjiStem + GodanRules.EStem(lastKana),
                          kanaStem + GodanRules.EStem(lastKana)),
 
@@ -283,7 +283,7 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
         private static IReadOnlyList<string> GenerateIrregular(
             string dict,
             string reading,
-            ConjugationForm form)
+            ConjugationFormEnum form)
         {
             bool isSuru = dict is "する" or "為る";
             bool isKuru = dict is "来る" or "くる";
@@ -295,35 +295,35 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
             {
                 return form switch
                 {
-                    ConjugationForm.PresentPlain => new[] { "する" },
-                    ConjugationForm.PresentPolite => new[] { "します" },
+                    ConjugationFormEnum.PresentPlain => new[] { "する" },
+                    ConjugationFormEnum.PresentPolite => new[] { "します" },
 
-                    ConjugationForm.TeForm => new[] { "して" },
-                    ConjugationForm.PastPlain => new[] { "した" },
-                    ConjugationForm.PastPolite => new[] { "しました" },
+                    ConjugationFormEnum.TeForm => new[] { "して" },
+                    ConjugationFormEnum.PastPlain => new[] { "した" },
+                    ConjugationFormEnum.PastPolite => new[] { "しました" },
 
-                    ConjugationForm.NegativePlain => new[] { "しない" },
-                    ConjugationForm.NegativePolite => new[] { "しません" },
+                    ConjugationFormEnum.NegativePlain => new[] { "しない" },
+                    ConjugationFormEnum.NegativePolite => new[] { "しません" },
 
-                    ConjugationForm.VolitionalPlain => new[] { "しよう" },
-                    ConjugationForm.VolitionalPolite => new[] { "しましょう" },
+                    ConjugationFormEnum.VolitionalPlain => new[] { "しよう" },
+                    ConjugationFormEnum.VolitionalPolite => new[] { "しましょう" },
 
-                    ConjugationForm.ConditionalBa => new[] { "すれば" },
-                    ConjugationForm.ConditionalTara => new[] { "したら" },
+                    ConjugationFormEnum.ConditionalBa => new[] { "すれば" },
+                    ConjugationFormEnum.ConditionalTara => new[] { "したら" },
 
-                    ConjugationForm.PotentialPlain => new[] { "できる" },
-                    ConjugationForm.PotentialPolite => new[] { "できます" },
+                    ConjugationFormEnum.PotentialPlain => new[] { "できる" },
+                    ConjugationFormEnum.PotentialPolite => new[] { "できます" },
 
-                    ConjugationForm.PassivePlain => new[] { "される" },
-                    ConjugationForm.PassivePolite => new[] { "されます" },
+                    ConjugationFormEnum.PassivePlain => new[] { "される" },
+                    ConjugationFormEnum.PassivePolite => new[] { "されます" },
 
-                    ConjugationForm.CausativePlain => new[] { "させる" },
-                    ConjugationForm.CausativePolite => new[] { "させます" },
+                    ConjugationFormEnum.CausativePlain => new[] { "させる" },
+                    ConjugationFormEnum.CausativePolite => new[] { "させます" },
 
-                    ConjugationForm.CausativePassivePlain => new[] { "させられる", "させれる" },
-                    ConjugationForm.CausativePassivePolite => new[] { "させられます", "させれます" },
+                    ConjugationFormEnum.CausativePassivePlain => new[] { "させられる", "させれる" },
+                    ConjugationFormEnum.CausativePassivePolite => new[] { "させられます", "させれます" },
 
-                    ConjugationForm.Imperative => new[] { "しろ", "せよ" },
+                    ConjugationFormEnum.Imperative => new[] { "しろ", "せよ" },
 
                     _ => []
                 };
@@ -332,36 +332,36 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
             // 来る / くる
             return form switch
             {
-                ConjugationForm.PresentPlain => new[] { "くる", "来る" },
-                ConjugationForm.PresentPolite => new[] { "きます", "来ます" },
+                ConjugationFormEnum.PresentPlain => new[] { "くる", "来る" },
+                ConjugationFormEnum.PresentPolite => new[] { "きます", "来ます" },
 
-                ConjugationForm.TeForm => new[] { "きて", "来て" },
-                ConjugationForm.PastPlain => new[] { "きた", "来た" },
-                ConjugationForm.PastPolite => new[] { "きました", "来ました" },
+                ConjugationFormEnum.TeForm => new[] { "きて", "来て" },
+                ConjugationFormEnum.PastPlain => new[] { "きた", "来た" },
+                ConjugationFormEnum.PastPolite => new[] { "きました", "来ました" },
 
-                ConjugationForm.NegativePlain => new[] { "こない", "来ない" },
-                ConjugationForm.NegativePolite => new[] { "きません", "来ません" },
+                ConjugationFormEnum.NegativePlain => new[] { "こない", "来ない" },
+                ConjugationFormEnum.NegativePolite => new[] { "きません", "来ません" },
 
-                ConjugationForm.VolitionalPlain => new[] { "こよう", "来よう" },
-                ConjugationForm.VolitionalPolite => new[] { "きましょう", "来ましょう" },
+                ConjugationFormEnum.VolitionalPlain => new[] { "こよう", "来よう" },
+                ConjugationFormEnum.VolitionalPolite => new[] { "きましょう", "来ましょう" },
 
-                ConjugationForm.ConditionalBa => new[] { "くれば", "来れば" },
-                ConjugationForm.ConditionalTara => new[] { "きたら", "来たら" },
+                ConjugationFormEnum.ConditionalBa => new[] { "くれば", "来れば" },
+                ConjugationFormEnum.ConditionalTara => new[] { "きたら", "来たら" },
 
-                ConjugationForm.PotentialPlain => new[] { "こられる", "来られる" },
-                ConjugationForm.PotentialPolite => new[] { "こられます", "来られます" },
+                ConjugationFormEnum.PotentialPlain => new[] { "こられる", "来られる" },
+                ConjugationFormEnum.PotentialPolite => new[] { "こられます", "来られます" },
 
                 // Passive is same surface form for 来る
-                ConjugationForm.PassivePlain => new[] { "こられる", "来られる" },
-                ConjugationForm.PassivePolite => new[] { "こられます", "来られます" },
+                ConjugationFormEnum.PassivePlain => new[] { "こられる", "来られる" },
+                ConjugationFormEnum.PassivePolite => new[] { "こられます", "来られます" },
 
-                ConjugationForm.CausativePlain => new[] { "こさせる", "来させる" },
-                ConjugationForm.CausativePolite => new[] { "こさせます", "来させます" },
+                ConjugationFormEnum.CausativePlain => new[] { "こさせる", "来させる" },
+                ConjugationFormEnum.CausativePolite => new[] { "こさせます", "来させます" },
 
-                ConjugationForm.CausativePassivePlain => new[] { "こさせられる", "来させられる" },
-                ConjugationForm.CausativePassivePolite => new[] { "こさせられます", "来させられます" },
+                ConjugationFormEnum.CausativePassivePlain => new[] { "こさせられる", "来させられる" },
+                ConjugationFormEnum.CausativePassivePolite => new[] { "こさせられます", "来させられます" },
 
-                ConjugationForm.Imperative => new[] { "こい", "来い" },
+                ConjugationFormEnum.Imperative => new[] { "こい", "来い" },
 
                 _ => []
             };

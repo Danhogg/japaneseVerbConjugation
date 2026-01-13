@@ -4,7 +4,6 @@
     {
         // Canonical answer
         public string Kanji { get; set; } = null!;
-        public string Reading { get; set; } = null!;
 
         // Optional alternates (rare but future-safe)
         public List<string> AlternateKanji { get; set; } = [];

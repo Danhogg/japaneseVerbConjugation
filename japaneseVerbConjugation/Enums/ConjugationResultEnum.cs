@@ -1,6 +1,6 @@
 ﻿namespace JapaneseVerbConjugation.Enums
 {
-    public enum ConjugationResult
+    public enum ConjugationResultEnum
     {
         Correct,
         Incorrect,
