@@ -1,0 +1,6 @@
+# CODEOWNERS file
+# This file defines code owners who must review pull requests
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# All files - require review from Danhogg
+* @Danhogg

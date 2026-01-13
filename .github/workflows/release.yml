@@ -47,6 +47,7 @@ jobs:
           JapaneseConjugationTraining-v*.zip
         draft: false
         prerelease: false
+        overwrite: true
         body: |
           ## Japanese Verb Conjugation Training ${{ github.ref_name }}
           

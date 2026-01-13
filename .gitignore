@@ -374,6 +374,9 @@ RELEASE_GUIDE.md
 # Release build guide (contains local directory paths)
 RELEASE_BUILD_GUIDE.md
 
+# Branch protection guide (private documentation, just for reference)
+BRANCH_PROTECTION_GUIDE.md
+
 # Release build output folder (build artifacts)
 Release/
 JapaneseConjugationTraining-*/
