@@ -35,19 +35,11 @@ if (Test-Path $outputPath) {
     Remove-Item $outputPath -Recurse -Force
 }
 
-# Run tests first
-Write-Host "Running unit tests..." -ForegroundColor Yellow
-dotnet test --no-build
+# Build and test first
+Write-Host "Building solution and running tests..." -ForegroundColor Yellow
+dotnet test --configuration Release
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Tests failed! Aborting build." -ForegroundColor Red
-    exit 1
-}
-
-# Build Release version
-Write-Host "Building Release version..." -ForegroundColor Green
-dotnet build $projectPath --configuration Release
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Build failed!" -ForegroundColor Red
     exit 1
 }
 
