@@ -365,5 +365,13 @@ FodyWeavers.xsd
 # Refactoring analysis documentation (temporary analysis file)
 REFACTORING_ANALYSIS.md
 
+# Security notes (private documentation, not for public)
+SECURITY_NOTES.md
+
+# Release guide (private documentation, just for reference)
+RELEASE_GUIDE.md
+
 # Release build output folder (build artifacts)
 Release/
+JapaneseConjugationTraining-*/
+JapaneseConjugationTraining-*.zip
