@@ -36,6 +36,9 @@ namespace JapaneseVerbConjugation
         {
             InitializeComponent();
             MinimumSize = new Size(950, 600);
+            
+            // Set window title with version
+            Text = VersionInfo.GetApplicationTitle();
 
             // Wire up event handlers to prevent radio button changes when locked
             五段.CheckedChanged += PreventVerbGroupChange;

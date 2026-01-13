@@ -10,8 +10,24 @@ Write-Host ""
 
 # Configuration
 $projectPath = "japaneseVerbConjugation"
-$outputPath = "Release"
 $runtime = "win-x64"
+
+# Read version from .csproj file
+$csprojPath = Join-Path $projectPath "JapaneseVerbConjugation.csproj"
+$csprojContent = Get-Content $csprojPath -Raw
+if ($csprojContent -match '<Version>([^<]+)</Version>') {
+    $version = $matches[1]
+    Write-Host "Building version: $version" -ForegroundColor Cyan
+} else {
+    $version = "1.0.0"
+    Write-Host "Version not found in .csproj, defaulting to: $version" -ForegroundColor Yellow
+}
+
+# Build output names with version
+$baseFolderName = "JapaneseConjugationTraining"
+$outputFolderName = "$baseFolderName-v$version"
+$outputPath = $outputFolderName
+$zipFileName = "$outputFolderName.zip"
 
 # Clean previous build
 Write-Host "Cleaning previous build..." -ForegroundColor Yellow
@@ -51,8 +67,13 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-# Verify data files are included
-Write-Host "Verifying data files..." -ForegroundColor Yellow
+# Copy data files to Data subfolder (app expects Data/ folder structure)
+Write-Host "Copying data files..." -ForegroundColor Yellow
+$dataFolder = Join-Path $outputPath "Data"
+if (-not (Test-Path $dataFolder)) {
+    New-Item -ItemType Directory -Path $dataFolder -Force | Out-Null
+}
+
 $dataFiles = @(
     "jmdict-eng-3.6.1.json.gz",
     "N5.csv",
@@ -61,16 +82,35 @@ $dataFiles = @(
 
 foreach ($file in $dataFiles) {
     $sourcePath = Join-Path $projectPath "Data" $file
-    $destPath = Join-Path $outputPath $file
+    $destPath = Join-Path $dataFolder $file
     
     if (Test-Path $sourcePath) {
-        if (-not (Test-Path $destPath)) {
-            Write-Host "Copying $file..." -ForegroundColor Yellow
-            Copy-Item $sourcePath -Destination $destPath -Force
-        }
+        Write-Host "  Copying $file..." -ForegroundColor Yellow
+        Copy-Item $sourcePath -Destination $destPath -Force
     } else {
-        Write-Host "Warning: $file not found in Data folder" -ForegroundColor Yellow
+        Write-Host "  Warning: $file not found in source Data folder" -ForegroundColor Yellow
     }
+}
+
+# Create ZIP file for distribution
+Write-Host ""
+Write-Host "Creating distribution ZIP..." -ForegroundColor Green
+
+# Remove old ZIP if it exists
+if (Test-Path $zipFileName) {
+    Remove-Item $zipFileName -Force
+}
+
+# Create ZIP file
+try {
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    [System.IO.Compression.ZipFile]::CreateFromDirectory($outputPath, $zipFileName, [System.IO.Compression.CompressionLevel]::Optimal, $false)
+    
+    $zipSize = [math]::Round((Get-Item $zipFileName).Length / 1MB, 2)
+    Write-Host "  ✓ ZIP created: $zipFileName ($zipSize MB)" -ForegroundColor Green
+} catch {
+    Write-Host "  ✗ Failed to create ZIP: $_" -ForegroundColor Red
+    Write-Host "  You can manually zip the $outputFolderName folder" -ForegroundColor Yellow
 }
 
 # Display results
@@ -78,12 +118,15 @@ Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Build Complete!" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "Output location: $((Get-Location).Path)\$outputPath" -ForegroundColor White
+Write-Host "Output folder: $((Get-Location).Path)\$outputPath" -ForegroundColor White
+Write-Host "ZIP file: $((Get-Location).Path)\$zipFileName" -ForegroundColor White
 Write-Host ""
 Write-Host "Files included:" -ForegroundColor White
-Get-ChildItem $outputPath -File | ForEach-Object {
+Get-ChildItem $outputPath -File -Recurse | ForEach-Object {
     $size = [math]::Round($_.Length / 1MB, 2)
-    Write-Host "  - $($_.Name) ($size MB)" -ForegroundColor Gray
+    $relativePath = $_.FullName.Replace((Get-Location).Path + "\$outputPath\", "")
+    Write-Host "  - $relativePath ($size MB)" -ForegroundColor Gray
 }
 Write-Host ""
 Write-Host "Ready for distribution!" -ForegroundColor Green
+Write-Host "Share the ZIP file: $zipFileName" -ForegroundColor Cyan
