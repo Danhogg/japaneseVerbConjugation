@@ -67,6 +67,13 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
+# Remove PDB files if any were created (not needed for distribution)
+Write-Host "Cleaning up debug files..." -ForegroundColor Yellow
+Get-ChildItem -Path $outputPath -Filter "*.pdb" -Recurse | ForEach-Object {
+    Write-Host "  Removing $($_.Name)..." -ForegroundColor Gray
+    Remove-Item $_.FullName -Force
+}
+
 # Copy data files to Data subfolder (app expects Data/ folder structure)
 Write-Host "Copying data files..." -ForegroundColor Yellow
 $dataFolder = Join-Path $outputPath "Data"
@@ -81,7 +88,7 @@ $dataFiles = @(
 )
 
 foreach ($file in $dataFiles) {
-    $sourcePath = Join-Path $projectPath "Data" $file
+    $sourcePath = Join-Path (Join-Path $projectPath "Data") $file
     $destPath = Join-Path $dataFolder $file
     
     if (Test-Path $sourcePath) {
@@ -107,9 +114,9 @@ try {
     [System.IO.Compression.ZipFile]::CreateFromDirectory($outputPath, $zipFileName, [System.IO.Compression.CompressionLevel]::Optimal, $false)
     
     $zipSize = [math]::Round((Get-Item $zipFileName).Length / 1MB, 2)
-    Write-Host "  ✓ ZIP created: $zipFileName ($zipSize MB)" -ForegroundColor Green
+    Write-Host "  [OK] ZIP created: $zipFileName ($zipSize MB)" -ForegroundColor Green
 } catch {
-    Write-Host "  ✗ Failed to create ZIP: $_" -ForegroundColor Red
+    Write-Host "  [ERROR] Failed to create ZIP: $_" -ForegroundColor Red
     Write-Host "  You can manually zip the $outputFolderName folder" -ForegroundColor Yellow
 }
 
