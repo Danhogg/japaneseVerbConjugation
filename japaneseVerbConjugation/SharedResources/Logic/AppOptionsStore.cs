@@ -1,4 +1,6 @@
-﻿using JapaneseVerbConjugation.Models;
+﻿using JapaneseVerbConjugation.Enums;
+using JapaneseVerbConjugation.Models;
+using JapaneseVerbConjugation.SharedResources.Constants;
 using System.Text.Json;
 
 namespace JapaneseVerbConjugation.SharedResources.Logic
@@ -19,12 +21,28 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
                 var json = File.ReadAllText(path);
                 var options = JsonSerializer.Deserialize<AppOptions>(json, JsonOptions());
 
-                return options ?? new AppOptions();
+                return options ?? new AppOptions
+                {
+                    PersistUserAnswers = true,
+                    ShowFurigana = true,
+                    AllowHiragana = false,
+                    FocusModeOnly = false,
+                    EnabledConjugations = [.. Enum.GetValues<ConjugationFormEnum>()
+                        .Where(form => form.ToString() != ConjugationNameConstants.DictionaryFormConst)]
+                }; ;
             }
             catch
             {
                 // If file is corrupt or schema mismatched, fall back safely
-                return new AppOptions();
+                return new AppOptions
+                {
+                    PersistUserAnswers = true,
+                    ShowFurigana = true,
+                    AllowHiragana = false,
+                    FocusModeOnly = false,
+                    EnabledConjugations = [.. Enum.GetValues<ConjugationFormEnum>()
+                        .Where(form => form.ToString() != ConjugationNameConstants.DictionaryFormConst)]
+                };
             }
         }
 

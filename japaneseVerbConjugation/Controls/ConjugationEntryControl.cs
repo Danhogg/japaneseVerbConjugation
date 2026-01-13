@@ -91,7 +91,16 @@ namespace JapaneseVerbConjugation.Controls
 
         public void RefreshFromState()
         {
-            _inputTextArea.Text = ConjugationEntryState.UserInput ?? string.Empty;
+            // Temporarily disconnect TextChanged to avoid circular updates
+            // We're setting the text from the state, so we don't want to update the state back
+            var currentText = ConjugationEntryState.UserInput ?? string.Empty;
+            
+            // Only update if different to avoid unnecessary events
+            if (_inputTextArea.Text != currentText)
+            {
+                _inputTextArea.Text = currentText;
+            }
+            
             RenderResult();
         }
 
@@ -129,6 +138,7 @@ namespace JapaneseVerbConjugation.Controls
             }
 
             _checkButton.Enabled = ConjugationEntryState.Result != ConjugationResultEnum.Correct;
+            _hintButton.Enabled = ConjugationEntryState.Result != ConjugationResultEnum.Correct;
         }
     }
 }

@@ -1,15 +1,23 @@
 ﻿using JapaneseVerbConjugation.Enums;
+using JapaneseVerbConjugation.Interfaces;
 using JapaneseVerbConjugation.Models;
 using JapaneseVerbConjugation.Models.ModelsForSerialising;
+using JapaneseVerbConjugation.SharedResources.DictionaryMethods;
+using JapaneseVerbConjugation.SharedResources.Methods;
+using System.Diagnostics;
 
 namespace JapaneseVerbConjugation.SharedResources.Logic
 {
     public static class VerbImportService
     {
+        private static readonly IJapaneseDictionary dictionary = JapaneseDictionaryProvider.Instance;
+
         public sealed class ImportResult
         {
             public int TotalRows { get; init; }
             public int AddedCount { get; init; }
+            public int SkippedDuplicatesCount { get; init; }
+            public int ErrorCount { get; init; }
             public List<string> SkippedDuplicates { get; init; } = [];
             public List<string> Errors { get; init; } = [];
         }
@@ -23,6 +31,7 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
             if (string.IsNullOrWhiteSpace(filePath)) throw new ArgumentNullException(nameof(filePath));
             if (!File.Exists(filePath)) throw new FileNotFoundException("Import file not found.", filePath);
 
+            var dictionary = JapaneseDictionaryProvider.Instance;
             var result = new ImportResult();
 
             var lines = File.ReadAllLines(filePath)
@@ -50,10 +59,19 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
 
             // Prepare duplicate index (DictionaryForm-based)
             var existing = new HashSet<string>(
-                store.Verbs.Select(v => (v.DictionaryForm ?? string.Empty).Trim()),
+                store.Verbs.Select(v => StringNormalization.NormalizeKey(v.DictionaryForm ?? string.Empty)),
                 StringComparer.Ordinal);
 
+            // Calculate total verbs to attempt (excluding header)
+            int totalVerbsToProcess = lines.Count - 1;
+            onRow?.Invoke(new RowImportEvent(RowStatus.Summary, string.Empty, $"Attempting to import {totalVerbsToProcess} verbs from {Path.GetFileName(filePath)}"));
+
             int added = 0;
+            int skippedDuplicates = 0;
+            int skippedErrors = 0;
+            int readingFailures = 0;
+            int groupFailures = 0;
+            int missingDictionaryForm = 0;
             int totalRows = 0;
 
             for (int i = 1; i < lines.Count; i++)
@@ -61,11 +79,13 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
                 totalRows++;
                 var cols = SplitLine(lines[i], delimiter);
 
-                string dict = GetCol(cols, map, "dictionaryform").Trim();
+                string dictRaw = GetCol(cols, map, "dictionaryform");
+                string dict = StringNormalization.NormalizeKey(dictRaw);
 
                 if (string.IsNullOrWhiteSpace(dict))
                 {
-                    // Missing required field -> error (red)
+                    missingDictionaryForm++;
+                    skippedErrors++;
                     var msg = $"Row {i + 1}: missing DictionaryForm (skipped)";
                     result.Errors.Add(msg);
                     onRow?.Invoke(new RowImportEvent(RowStatus.Error, string.Empty, msg));
@@ -74,25 +94,61 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
 
                 if (existing.Contains(dict))
                 {
-                    // Duplicate -> orange
+                    skippedDuplicates++;
                     result.SkippedDuplicates.Add(dict);
                     onRow?.Invoke(new RowImportEvent(RowStatus.Duplicate, dict, $"Duplicate skipped: {dict}"));
                     continue;
                 }
 
-                string reading = GetCol(cols, map, "reading").Trim();
-                string groupRaw = GetCol(cols, map, "group").Trim();
-                string meaning = GetCol(cols, map, "meaning").Trim();
+                string groupRaw = GetCol(cols, map, "group");
+                string meaning = GetCol(cols, map, "meaning");
 
-                VerbGroupEnum group;
-                try
+                if (!dictionary.TryGetReading(dict, out var dictionaryReading))
                 {
-                    group = ParseVerbGroup(groupRaw, defaultIfMissing: VerbGroupEnum.Godan);
+                    readingFailures++;
+                    skippedErrors++;
+                    var normalized = StringNormalization.NormalizeKey(dict);
+                    var msg = $"Row {i + 1}: no dictionary reading found for '{dict}' (normalized: '{normalized}') (skipped)";
+                    result.Errors.Add(msg);
+                    Debug.WriteLine($"[IMPORT] Reading lookup failed for '{dict}' (normalized: '{normalized}')");
+                    onRow?.Invoke(new RowImportEvent(RowStatus.Error, dict, msg));
+                    continue;
                 }
-                catch (Exception ex)
+
+                // Verify we got a valid hiragana reading (should be non-empty and contain hiragana characters)
+                if (string.IsNullOrWhiteSpace(dictionaryReading))
                 {
-                    var msg = $"Row {i + 1}: invalid Group '{groupRaw}' for '{dict}' (skipped)";
-                    result.Errors.Add($"{msg} ({ex.Message})");
+                    readingFailures++;
+                    skippedErrors++;
+                    var msg = $"Row {i + 1}: empty reading returned for '{dict}' (skipped)";
+                    result.Errors.Add(msg);
+                    Debug.WriteLine($"[IMPORT] Empty reading for '{dict}'");
+                    onRow?.Invoke(new RowImportEvent(RowStatus.Error, dict, msg));
+                    continue;
+                }
+
+                // Verify the reading contains hiragana (JMdict kana field should be hiragana)
+                // Hiragana range: \u3040-\u309F
+                bool containsHiragana = dictionaryReading.Any(c => c >= '\u3040' && c <= '\u309F');
+                bool containsKatakana = dictionaryReading.Any(c => c >= '\u30A0' && c <= '\u30FF');
+                
+                if (!containsHiragana && containsKatakana)
+                {
+                    Debug.WriteLine($"[IMPORT WARNING] '{dict}' has katakana reading '{dictionaryReading}' instead of hiragana - this is unusual");
+                }
+                else if (!containsHiragana && !containsKatakana)
+                {
+                    Debug.WriteLine($"[IMPORT WARNING] '{dict}' reading '{dictionaryReading}' contains no hiragana/katakana - may be kanji-only or invalid");
+                }
+
+                if (!dictionary.TryGetVerbGroup(dict, out var group))
+                {
+                    groupFailures++;
+                    skippedErrors++;
+                    var normalized = StringNormalization.NormalizeKey(dict);
+                    var msg = $"Row {i + 1}: no dictionary verb group found for '{dict}' (normalized: '{normalized}') (skipped)";
+                    result.Errors.Add(msg);
+                    Debug.WriteLine($"[IMPORT] Group lookup failed for '{dict}' (normalized: '{normalized}')");
                     onRow?.Invoke(new RowImportEvent(RowStatus.Error, dict, msg));
                     continue;
                 }
@@ -101,32 +157,51 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
                 {
                     var s when s.Contains("n5") => JLPTLevelEnum.N5,
                     var s when s.Contains("n4") => JLPTLevelEnum.N4,
-                    var s when s.Contains("n3") => JLPTLevelEnum.N3,
-                    var s when s.Contains("n2") => JLPTLevelEnum.N2,
-                    var s when s.Contains("n1") => JLPTLevelEnum.N1,
                     _ => JLPTLevelEnum.NotSpecified,
                 };
 
                 var verb = new Verb
                 {
                     DictionaryForm = dict,
-                    Reading = string.IsNullOrWhiteSpace(reading) ? dict : reading,
-                    Group = group,
-                    Meaning = string.IsNullOrWhiteSpace(meaning) ? null : meaning,
+                    Reading = dictionaryReading, // This should be hiragana (furigana) from JMdict kana field
+                    Group = group, // VerbGroupEnum: Ichidan, Godan, or Irregular
+                    Meaning = null,
                     JLPTLevel = jlptLevel,
                 };
+
+                // Log a sample of what we're saving for verification
+                if (added < 5)
+                {
+                    Debug.WriteLine($"[IMPORT] Sample verb {added + 1}: '{dict}' -> reading: '{dictionaryReading}', group: {group}");
+                }
 
                 store.Verbs.Add(verb);
                 existing.Add(dict);
                 added++;
 
-                onRow?.Invoke(new RowImportEvent(RowStatus.Added, dict, $"Added: {dict}"));
+                onRow?.Invoke(new RowImportEvent(RowStatus.Added, dict, $"Added: {dict} ({dictionaryReading}, {group})"));
             }
+
+            // Log summary to import window
+            onRow?.Invoke(new RowImportEvent(RowStatus.Summary, string.Empty, "===== Import Summary ====="));
+            onRow?.Invoke(new RowImportEvent(RowStatus.Summary, string.Empty, $"Total verbs to process: {totalVerbsToProcess}"));
+            onRow?.Invoke(new RowImportEvent(RowStatus.Summary, string.Empty, $"Successfully added: {added}"));
+            onRow?.Invoke(new RowImportEvent(RowStatus.Summary, string.Empty, $"Skipped (duplicates): {skippedDuplicates}"));
+            onRow?.Invoke(new RowImportEvent(RowStatus.Summary, string.Empty, $"Skipped (errors): {skippedErrors}"));
+            if (skippedErrors > 0)
+            {
+                onRow?.Invoke(new RowImportEvent(RowStatus.Summary, string.Empty, $"  - Missing DictionaryForm: {missingDictionaryForm}"));
+                onRow?.Invoke(new RowImportEvent(RowStatus.Summary, string.Empty, $"  - Reading lookup failures: {readingFailures}"));
+                onRow?.Invoke(new RowImportEvent(RowStatus.Summary, string.Empty, $"  - Group lookup failures: {groupFailures}"));
+            }
+            onRow?.Invoke(new RowImportEvent(RowStatus.Summary, string.Empty, "============================"));
 
             return new ImportResult
             {
-                TotalRows = totalRows,
+                TotalRows = totalVerbsToProcess,
                 AddedCount = added,
+                SkippedDuplicatesCount = skippedDuplicates,
+                ErrorCount = skippedErrors,
                 SkippedDuplicates = result.SkippedDuplicates,
                 Errors = result.Errors
             };
@@ -205,22 +280,9 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
             return [.. list];
         }
 
-        private static VerbGroupEnum ParseVerbGroup(string raw, VerbGroupEnum defaultIfMissing)
-        {
-            if (string.IsNullOrWhiteSpace(raw))
-                return defaultIfMissing;
+        // Note: NormalizeKey is now in StringNormalization utility class
 
-            var s = raw.Trim().ToLowerInvariant();
-
-            // Accept your UI inputs + english + numbers
-            if (s is "godan" or "5" or "group 5" or "group5" or "五段") return VerbGroupEnum.Godan;
-            if (s is "ichidan" or "1" or "group 1" or "group1" or "一段") return VerbGroupEnum.Ichidan;
-            if (s is "irregular" or "3" or "group 3" or "group3" or "不規則") return VerbGroupEnum.Irregular;
-
-            throw new FormatException("Expected Godan/Ichidan/Irregular (or 5/1/3).");
-        }
-
-        public enum RowStatus { Added, Duplicate, Error }
+        public enum RowStatus { Added, Duplicate, Error, Summary }
 
         public readonly record struct RowImportEvent(RowStatus Status, string DictionaryForm, string Message);
     }

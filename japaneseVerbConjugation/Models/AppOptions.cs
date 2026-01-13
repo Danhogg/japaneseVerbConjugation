@@ -1,4 +1,5 @@
 ﻿using JapaneseVerbConjugation.Enums;
+using JapaneseVerbConjugation.SharedResources.Constants;
 
 namespace JapaneseVerbConjugation.Models
 {
@@ -22,6 +23,7 @@ namespace JapaneseVerbConjugation.Models
         // I don't like hard coding the dictionary exclusion in this way but it's simple
         // and not that big of a deal
         public HashSet<ConjugationFormEnum> EnabledConjugations { get; set; } 
-            = [.. Enum.GetValues<ConjugationFormEnum>().Where(form => form.ToString() != "Dictionary")];
+            = [.. Enum.GetValues<ConjugationFormEnum>()
+                .Where(form => form.ToString() != ConjugationNameConstants.DictionaryFormConst)];
     }
 }

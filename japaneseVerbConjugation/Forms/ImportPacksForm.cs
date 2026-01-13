@@ -59,70 +59,133 @@ namespace JapaneseVerbConjugation.Forms
 
         private void BuildLayout()
         {
+            SuspendLayout();
+
+            // Root layout: stable rows + stable spacing
             var root = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 1,
-                RowCount = 4,
-                Padding = new Padding(12),
+                RowCount = 3,
+                Padding = new Padding(12)
             };
-            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));         // top checkboxes
-            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));         // custom path + open button
-            root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));     // log
-            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));         // buttons
 
-            var top = new FlowLayoutPanel
+            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));         // options group
+            root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));     // log
+            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));         // bottom buttons
+
+            // --- Options group ---
+            var optionsGroup = new GroupBox
+            {
+                Text = "What do you want to import?",
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                Padding = new Padding(10)
+            };
+
+            var optionsLayout = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                FlowDirection = FlowDirection.TopDown,
-                WrapContents = false,
+                ColumnCount = 2,
+                RowCount = 4,
                 AutoSize = true
             };
-            top.Controls.Add(_n5);
-            top.Controls.Add(_n4);
-            top.Controls.Add(_custom);
 
-            var customRow = new FlowLayoutPanel
+            optionsLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            optionsLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+
+            // Checkboxes
+            _n5.AutoSize = true;
+            _n4.AutoSize = true;
+            _custom.AutoSize = true;
+
+            // Custom buttons (no path label)
+            _openCustom.AutoSize = false;
+            _openCustom.MinimumSize = new Size(140, 34);
+
+            var openFolder = new Button
+            {
+                Text = "Open data folder",
+                AutoSize = false,
+                MinimumSize = new Size(140, 34)
+            };
+            openFolder.Click += (_, _) =>
+            {
+                // Opens AppData folder where custom.csv lives
+                var dir = Path.GetDirectoryName(_customPathLabel.Text); // you already store the path in this label
+                if (string.IsNullOrWhiteSpace(dir)) return;
+
+                try
+                {
+                    Process.Start(new ProcessStartInfo { FileName = dir, UseShellExecute = true });
+                }
+                catch
+                {
+                    MessageBox.Show(this, $"Could not open folder:\n{dir}", "Open folder failed",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            };
+
+            // Row 0-2: packs
+            optionsLayout.Controls.Add(_n5, 0, 0);
+            optionsLayout.SetColumnSpan(_n5, 2);
+
+            optionsLayout.Controls.Add(_n4, 0, 1);
+            optionsLayout.SetColumnSpan(_n4, 2);
+
+            optionsLayout.Controls.Add(_custom, 0, 2);
+            optionsLayout.SetColumnSpan(_custom, 2);
+
+            // Row 3: custom buttons aligned to the left
+            var customButtons = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = false,
                 AutoSize = true,
-                Padding = new Padding(0, 10, 0, 10)
+                Padding = new Padding(22, 0, 0, 0) // indent under the checkbox
             };
+            customButtons.Controls.Add(_openCustom);
+            customButtons.Controls.Add(openFolder);
 
-            var customText = new Label
-            {
-                Text = "Custom file:",
-                AutoSize = true,
-                Padding = new Padding(0, 6, 8, 0)
-            };
+            optionsLayout.Controls.Add(customButtons, 0, 3);
+            optionsLayout.SetColumnSpan(customButtons, 2);
 
-            customRow.Controls.Add(customText);
-            customRow.Controls.Add(_customPathLabel);
-            customRow.Controls.Add(_openCustom);
+            optionsGroup.Controls.Add(optionsLayout);
 
-            // Make the log look nicer
-            _log.Font = new Font(Font.FontFamily, Font.Size + 1);
+            // --- Log ---
+            _log.Dock = DockStyle.Fill;
+            _log.ReadOnly = true;
+            _log.BorderStyle = BorderStyle.FixedSingle;
             _log.BackColor = SystemColors.Window;
+            _log.Font = new Font(Font.FontFamily, Font.Size); // don’t inflate; keeps consistent sizing
 
+            // --- Bottom buttons ---
             var buttons = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 FlowDirection = FlowDirection.RightToLeft,
-                AutoSize = true,
                 WrapContents = false,
+                AutoSize = true,
                 Padding = new Padding(0, 10, 0, 0)
             };
+
+            _import.AutoSize = false;
+            _close.AutoSize = false;
+            _import.MinimumSize = new Size(100, 34);
+            _close.MinimumSize = new Size(100, 34);
+
             buttons.Controls.Add(_close);
             buttons.Controls.Add(_import);
 
-            root.Controls.Add(top, 0, 0);
-            root.Controls.Add(customRow, 0, 1);
-            root.Controls.Add(_log, 0, 2);
-            root.Controls.Add(buttons, 0, 3);
+            // Add to root
+            root.Controls.Add(optionsGroup, 0, 0);
+            root.Controls.Add(_log, 0, 1);
+            root.Controls.Add(buttons, 0, 2);
 
             Controls.Add(root);
+
+            ResumeLayout();
         }
 
         private async void DoImport(string customCsvPath)
@@ -166,6 +229,10 @@ namespace JapaneseVerbConjugation.Forms
             _log.SelectionColor = SystemColors.ControlText;
 
             _log.ScrollToCaret();
+            
+            // Force immediate UI update so messages appear one by one
+            _log.Refresh();
+            Application.DoEvents();
         }
 
         private static void OpenFile(string path)

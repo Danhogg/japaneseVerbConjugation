@@ -20,7 +20,7 @@
         {
             dictionaryTableLayout = new TableLayoutPanel();
             dictionaryFormAndReadingLayout = new TableLayoutPanel();
-            checkVerbGroup = new Button();
+            checkVerbGroupButton = new Button();
             furiganaReading = new Label();
             currentVerb = new Label();
             verbGroup = new GroupBox();
@@ -30,8 +30,10 @@
             conjugationScrollPanel = new Panel();
             conjugationTableLayout = new TableLayoutPanel();
             controlFlowButtons = new TableLayoutPanel();
-            options = new Button();
-            import = new Button();
+            optionsButton = new Button();
+            importButton = new Button();
+            nextVerbButton = new Button();
+            clearButton = new Button();
             dictionaryTableLayout.SuspendLayout();
             dictionaryFormAndReadingLayout.SuspendLayout();
             verbGroup.SuspendLayout();
@@ -61,7 +63,7 @@
             // 
             dictionaryFormAndReadingLayout.ColumnCount = 1;
             dictionaryFormAndReadingLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-            dictionaryFormAndReadingLayout.Controls.Add(checkVerbGroup, 0, 3);
+            dictionaryFormAndReadingLayout.Controls.Add(checkVerbGroupButton, 0, 3);
             dictionaryFormAndReadingLayout.Controls.Add(furiganaReading, 0, 1);
             dictionaryFormAndReadingLayout.Controls.Add(currentVerb, 0, 0);
             dictionaryFormAndReadingLayout.Controls.Add(verbGroup, 0, 2);
@@ -78,39 +80,37 @@
             dictionaryFormAndReadingLayout.Size = new Size(900, 206);
             dictionaryFormAndReadingLayout.TabIndex = 2;
             // 
-            // checkVerbGroup
+            // checkVerbGroupButton
             // 
-            checkVerbGroup.Anchor = AnchorStyles.None;
-            checkVerbGroup.Font = new Font("Yu Gothic UI", 12F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            checkVerbGroup.Location = new Point(390, 168);
-            checkVerbGroup.Name = "checkVerbGroup";
-            checkVerbGroup.Size = new Size(119, 32);
-            checkVerbGroup.TabIndex = 3;
-            checkVerbGroup.Text = "Check Group";
-            checkVerbGroup.UseVisualStyleBackColor = true;
-            checkVerbGroup.Click += CheckVerbGroup;
+            checkVerbGroupButton.Anchor = AnchorStyles.None;
+            checkVerbGroupButton.Font = new Font("Yu Gothic UI", 12F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            checkVerbGroupButton.Location = new Point(390, 168);
+            checkVerbGroupButton.Name = "checkVerbGroupButton";
+            checkVerbGroupButton.Size = new Size(119, 32);
+            checkVerbGroupButton.TabIndex = 3;
+            checkVerbGroupButton.Text = "Check Group";
+            checkVerbGroupButton.UseVisualStyleBackColor = true;
+            checkVerbGroupButton.Click += CheckVerbGroup;
             // 
             // furiganaReading
             // 
             furiganaReading.Anchor = AnchorStyles.None;
             furiganaReading.AutoSize = true;
             furiganaReading.Font = new Font("Yu Gothic UI", 14.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            furiganaReading.Location = new Point(421, 71);
+            furiganaReading.Location = new Point(450, 71);
             furiganaReading.Name = "furiganaReading";
-            furiganaReading.Size = new Size(58, 25);
+            furiganaReading.Size = new Size(0, 25);
             furiganaReading.TabIndex = 6;
-            furiganaReading.Text = "たべる";
             // 
             // currentVerb
             // 
             currentVerb.Anchor = AnchorStyles.None;
             currentVerb.AutoSize = true;
             currentVerb.Font = new Font("Yu Gothic UI", 36F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            currentVerb.Location = new Point(373, 1);
+            currentVerb.Location = new Point(450, 1);
             currentVerb.Name = "currentVerb";
-            currentVerb.Size = new Size(153, 65);
+            currentVerb.Size = new Size(0, 65);
             currentVerb.TabIndex = 7;
-            currentVerb.Text = "食べる";
             currentVerb.TextAlign = ContentAlignment.MiddleCenter;
             // 
             // verbGroup
@@ -198,8 +198,11 @@
             controlFlowButtons.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             controlFlowButtons.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100F));
             controlFlowButtons.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100F));
-            controlFlowButtons.Controls.Add(options, 0, 0);
-            controlFlowButtons.Controls.Add(import, 1, 0);
+            controlFlowButtons.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 20F));
+            controlFlowButtons.Controls.Add(optionsButton, 0, 0);
+            controlFlowButtons.Controls.Add(importButton, 1, 0);
+            controlFlowButtons.Controls.Add(nextVerbButton, 3, 0);
+            controlFlowButtons.Controls.Add(clearButton, 2, 0);
             controlFlowButtons.Location = new Point(3, 518);
             controlFlowButtons.Name = "controlFlowButtons";
             controlFlowButtons.RowCount = 1;
@@ -207,30 +210,55 @@
             controlFlowButtons.Size = new Size(894, 79);
             controlFlowButtons.TabIndex = 4;
             // 
-            // options
+            // optionsButton
             // 
-            options.Anchor = AnchorStyles.Left;
-            options.Font = new Font("Yu Gothic UI", 12F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            options.Location = new Point(10, 21);
-            options.Margin = new Padding(10, 3, 3, 3);
-            options.Name = "options";
-            options.Size = new Size(75, 36);
-            options.TabIndex = 5;
-            options.Text = "Options";
-            options.UseVisualStyleBackColor = true;
+            optionsButton.Anchor = AnchorStyles.Left;
+            optionsButton.Font = new Font("Yu Gothic UI", 12F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            optionsButton.Location = new Point(5, 21);
+            optionsButton.Margin = new Padding(5, 3, 3, 3);
+            optionsButton.Name = "optionsButton";
+            optionsButton.Size = new Size(90, 36);
+            optionsButton.TabIndex = 5;
+            optionsButton.Text = "Options";
+            optionsButton.UseVisualStyleBackColor = true;
+            optionsButton.Click += ChangeUserOptions;
             // 
-            // import
+            // importButton
             // 
-            import.Anchor = AnchorStyles.Left;
-            import.Font = new Font("Yu Gothic UI", 12F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            import.Location = new Point(110, 21);
-            import.Margin = new Padding(10, 3, 3, 3);
-            import.Name = "import";
-            import.Size = new Size(75, 36);
-            import.TabIndex = 6;
-            import.Text = "Import";
-            import.UseVisualStyleBackColor = true;
-            import.Click += ShowImportDialog;
+            importButton.Anchor = AnchorStyles.Left;
+            importButton.Font = new Font("Yu Gothic UI", 12F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            importButton.Location = new Point(110, 21);
+            importButton.Margin = new Padding(10, 3, 3, 3);
+            importButton.Name = "importButton";
+            importButton.Size = new Size(90, 36);
+            importButton.TabIndex = 6;
+            importButton.Text = "Import";
+            importButton.UseVisualStyleBackColor = true;
+            importButton.Click += ShowImportDialog;
+            // 
+            // nextVerbButton
+            // 
+            nextVerbButton.Anchor = AnchorStyles.Right;
+            nextVerbButton.Font = new Font("Yu Gothic UI", 12F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            nextVerbButton.Location = new Point(801, 21);
+            nextVerbButton.Name = "nextVerbButton";
+            nextVerbButton.Size = new Size(90, 36);
+            nextVerbButton.TabIndex = 7;
+            nextVerbButton.Text = "Next Verb";
+            nextVerbButton.UseVisualStyleBackColor = true;
+            nextVerbButton.Click += SkipToNextVerb;
+            // 
+            // clearButton
+            // 
+            clearButton.Anchor = AnchorStyles.Right;
+            clearButton.Font = new Font("Yu Gothic UI", 12F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            clearButton.Location = new Point(701, 21);
+            clearButton.Name = "clearButton";
+            clearButton.Size = new Size(90, 36);
+            clearButton.TabIndex = 8;
+            clearButton.Text = "Clear";
+            clearButton.UseVisualStyleBackColor = true;
+            clearButton.Click += ClearAnswers;
             // 
             // VerbConjugationForm
             // 
@@ -257,13 +285,15 @@
         private RadioButton 不規則;
         private RadioButton 一段;
         private RadioButton 五段;
-        private Button checkVerbGroup;
+        private Button checkVerbGroupButton;
         private Label furiganaReading;
         private Label currentVerb;
         private Panel conjugationScrollPanel;
         private TableLayoutPanel conjugationTableLayout;
         private TableLayoutPanel controlFlowButtons;
-        private Button options;
-        private Button import;
+        private Button optionsButton;
+        private Button importButton;
+        private Button nextVerbButton;
+        private Button clearButton;
     }
 }

@@ -6,8 +6,7 @@ using JapaneseVerbConjugation.Models.ModelsForSerialising;
 using JapaneseVerbConjugation.SharedResources.Constants;
 using JapaneseVerbConjugation.SharedResources.Logic;
 using JapaneseVerbConjugation.SharedResources.Methods;
-using System.Collections.Generic;
-using System.Security.Cryptography;
+using System.Diagnostics;
 
 namespace JapaneseVerbConjugation
 {
@@ -24,30 +23,39 @@ namespace JapaneseVerbConjugation
         // AppOptions loaded from user settings.
         private AppOptions _appOptions;
 
-        private VerbStore _verbStore;
+        private readonly VerbStore _verbStore;
 
-        private Verb _currentVerb = new();
+        private Verb? _currentVerb = null;
+
+        // Track if verb group is locked (answered correctly) to prevent changes
+        private bool _verbGroupLocked = false;
 
         public VerbConjugationForm()
         {
             InitializeComponent();
             MinimumSize = new Size(950, 600);
 
+            // Wire up event handlers to prevent radio button changes when locked
+            五段.CheckedChanged += PreventVerbGroupChange;
+            一段.CheckedChanged += PreventVerbGroupChange;
+            不規則.CheckedChanged += PreventVerbGroupChange;
+
             _appOptions = AppOptionsStore.LoadOrCreateDefault();
             _verbStore = VerbStoreStore.LoadOrCreateDefault();
 
+            // ApplyUserOptions will call RebuildConjugationRows() on startup
+            // This creates the entry states and controls BEFORE we try to load saved answers
             ApplyUserOptions(_appOptions, true);
 
-            //This is hard coded for testing purposes only
-            // when the app loads verbs from storage we will load the last verb the user was
-            // working on or a random one if we have no saved states
-            LoadNextVerb(new Verb
+            // Now load the verb - entry states and controls already exist from RebuildConjugationRows
+            if (_verbStore.Verbs.Count > 0)
             {
-                DictionaryForm = "泳ぐ",
-                Reading = "およぐ",
-                Group =
-                VerbGroupEnum.Godan
-            });
+                LoadNextVerb(_verbStore.Verbs[0]);
+            }
+            else
+            {
+                LoadNextVerb(null, verbStoreEmpty: true);
+            }
         }
 
         private void ApplyUserOptions(AppOptions newOptions, bool startUp = false)
@@ -103,7 +111,17 @@ namespace JapaneseVerbConjugation
                 AddConjugationEntry(form);
             }
 
-            _expectedAnswers = BuildExpectedAnswersForCurrentVerb();
+            // Only build expected answers if we have a current verb
+            // (this will be rebuilt in LoadNextVerb if needed)
+            if (_currentVerb != null)
+            {
+                _expectedAnswers = BuildExpectedAnswersForCurrentVerb();
+            }
+            else
+            {
+                _expectedAnswers = [];
+            }
+            
             conjugationTableLayout.ResumeLayout();
         }
 
@@ -146,8 +164,15 @@ namespace JapaneseVerbConjugation
             conjugationTableLayout.Controls.Add(entryControl, column, row);
         }
 
-        private void LoadNextVerb(Verb? nextVerb)
+        private void LoadNextVerb(Verb? nextVerb = null, bool verbStoreEmpty = false)
         {
+            if (nextVerb == null && verbStoreEmpty)
+            {
+                SetStudyUiEnabled(enabled: false);
+                currentVerb.Text = "Import verbs to begin";
+                furiganaReading.Text = "";
+                return;
+            }
             //When we move to loading from storage we will change this to 
             // if (nextVerb == null) => load a random verb from storage
             ArgumentNullException.ThrowIfNull(nextVerb);
@@ -158,6 +183,9 @@ namespace JapaneseVerbConjugation
             currentVerb.Text = _currentVerb.DictionaryForm;
             furiganaReading.Text = _currentVerb.Reading;
 
+            // Build expected answers FIRST (needed for checking saved answers)
+            _expectedAnswers = BuildExpectedAnswersForCurrentVerb();
+
             // Reset entry states
             foreach (var entry in _entryStates)
             {
@@ -165,20 +193,47 @@ namespace JapaneseVerbConjugation
                 entry.Result = ConjugationResultEnum.Unchecked;
             }
 
-            // Push reset state into controls + clear UI result styles
+            // Restore saved answers from verb store (source of truth)
+            if (_appOptions.PersistUserAnswers && _currentVerb.Conjugations.Count > 0)
+            {
+                foreach (var entry in _entryStates)
+                {
+                    if (_currentVerb.Conjugations.TryGetValue(entry.ConjugationForm, out var saved))
+                    {
+                        var savedText = saved.Kanji ?? string.Empty;
+                        entry.UserInput = savedText;
+                        
+                        // Check if the saved answer is still correct
+                        var expected = _expectedAnswers.TryGetValue(entry.ConjugationForm, out var list)
+                            ? list
+                            : [];
+                        entry.Result = AnswerChecker.Check(entry.UserInput, expected, _appOptions);
+                    }
+                }
+            }
+
+            // Push restored state into controls (this updates the UI text boxes)
+            // IMPORTANT: This must happen AFTER restoring to entry states
             foreach (var c in conjugationTableLayout.Controls)
             {
                 if (c is ConjugationEntryControl control)
                 {
-                    control.RefreshFromState(); // add this method (below)
+                    // Refresh the control to show the restored state
+                    control.RefreshFromState();
                 }
             }
 
-            // Reset verb group selection UI
-            ResetVerbGroup();
-
-            _expectedAnswers = BuildExpectedAnswersForCurrentVerb();
-            // Optionally, update any other UI elements to show the loaded verb
+            // Restore verb group selection if previously answered correctly
+            if (_appOptions.PersistUserAnswers && _currentVerb.VerbGroupAnsweredCorrectly)
+            {
+                // Use the centralized method to restore correct state
+                SetVerbGroupState(_currentVerb.Group, true, true);
+            }
+            else
+            {
+                // Reset verb group selection UI
+                ResetVerbGroup();
+            }
         }
 
         private void OnCheckRequested(object? sender, EventArgs e)
@@ -186,15 +241,100 @@ namespace JapaneseVerbConjugation
             if (sender is not ConjugationEntryControl entry)
                 return;
 
-            var conjugationEntryState = entry.ConjugationEntryState;
+            var state = entry.ConjugationEntryState;
 
-            var expected = _expectedAnswers.TryGetValue(conjugationEntryState.ConjugationForm, out var list)
+            var expected = _expectedAnswers.TryGetValue(state.ConjugationForm, out var list)
                 ? list
                 : [];
 
-            conjugationEntryState.Result = AnswerChecker.Check(conjugationEntryState.UserInput, expected, _appOptions);
+            state.Result = AnswerChecker.Check(state.UserInput, expected, _appOptions);
+
+            // Save the user's answer to the verb store (source of truth)
+            PersistUserAnswer(state.ConjugationForm, state.UserInput, expected, state.Result);
 
             entry.RenderResult();
+        }
+
+        private void PersistUserAnswer(
+            ConjugationFormEnum form,
+            string? userInput,
+            IReadOnlyList<string> expected,
+            ConjugationResultEnum result)
+        {
+            if (!_appOptions.PersistUserAnswers)
+                return;
+
+            if (_currentVerb is null)
+                return;
+
+            // Save the user's input as the source of truth
+            // If the answer is correct, use the canonical form; otherwise save what the user typed
+            string answerToSave;
+            if (result == ConjugationResultEnum.Correct && expected.Count > 0)
+            {
+                // For correct answers, save the canonical form
+                answerToSave = ConjugationAnswerPicker.PickCanonical(expected) ?? userInput ?? string.Empty;
+            }
+            else
+            {
+                // For incorrect/unchecked answers, save what the user typed
+                answerToSave = userInput ?? string.Empty;
+            }
+
+            if (string.IsNullOrWhiteSpace(answerToSave))
+                return;
+
+            _currentVerb.Conjugations[form] = new ConjugationAnswer
+            {
+                Kanji = answerToSave
+            };
+
+            VerbStoreStore.Save(_verbStore);
+        }
+
+        private void PersistAllCurrentAnswers()
+        {
+            if (!_appOptions.PersistUserAnswers || _currentVerb is null)
+                return;
+
+            bool anyChanges = false;
+
+            foreach (var entry in _entryStates)
+            {
+                if (string.IsNullOrWhiteSpace(entry.UserInput))
+                    continue;
+
+                var expected = _expectedAnswers.TryGetValue(entry.ConjugationForm, out var list)
+                    ? list
+                    : [];
+
+                // Determine what to save based on the result
+                string answerToSave;
+                if (entry.Result == ConjugationResultEnum.Correct && expected.Count > 0)
+                {
+                    answerToSave = ConjugationAnswerPicker.PickCanonical(expected) ?? entry.UserInput;
+                }
+                else
+                {
+                    answerToSave = entry.UserInput;
+                }
+
+                // Only update if different from what's already saved
+                if (!_currentVerb.Conjugations.TryGetValue(entry.ConjugationForm, out var existing) ||
+                    existing.Kanji != answerToSave)
+                {
+                    _currentVerb.Conjugations[entry.ConjugationForm] = new ConjugationAnswer
+                    {
+                        Kanji = answerToSave
+                    };
+                    anyChanges = true;
+                }
+            }
+
+            if (anyChanges)
+            {
+                VerbStoreStore.Save(_verbStore);
+            }
         }
 
         private void CheckVerbGroup(object sender, EventArgs e)
@@ -219,26 +359,102 @@ namespace JapaneseVerbConjugation
 
             var isCorrect = guess == correct;
 
-            verbGroup.SuspendLayout();
-            ResetVerbGroup();
-            selectedRadio.ForeColor =
-                isCorrect
-                    ? ColourConstants.LabelCorrectColour
-                    : ColourConstants.LabelIncorrectColour;
-            checkVerbGroup.Enabled = !isCorrect;
-            verbGroup.ResumeLayout();
+            // Use the centralized method to set state
+            SetVerbGroupState(guess, isCorrect, isCorrect);
+
+            // If correct, save the state
+            if (isCorrect && _appOptions.PersistUserAnswers && _currentVerb != null)
+            {
+                _currentVerb.VerbGroupAnsweredCorrectly = true;
+                VerbStoreStore.Save(_verbStore);
+            }
         }
 
         private void ResetVerbGroup()
         {
+            SetVerbGroupState(null, false, false);
+        }
+
+        /// <summary>
+        /// Sets the verb group UI state consistently.
+        /// </summary>
+        /// <param name="selectedGroup">The group to select and highlight (null to reset all)</param>
+        /// <param name="isCorrect">True if the selected group is correct (green), false if incorrect (red), null to reset</param>
+        /// <param name="lockSelection">True to lock selection (prevent changes), false to allow interaction</param>
+        private void SetVerbGroupState(VerbGroupEnum? selectedGroup, bool? isCorrect, bool lockSelection)
+        {
+            verbGroup.SuspendLayout();
+
+            // Update lock state
+            _verbGroupLocked = lockSelection;
+
+            // Reset all radio buttons
             五段.Checked = false;
             一段.Checked = false;
             不規則.Checked = false;
-
             五段.ForeColor = ColourConstants.DefaultTextColour;
             一段.ForeColor = ColourConstants.DefaultTextColour;
             不規則.ForeColor = ColourConstants.DefaultTextColour;
-            checkVerbGroup.Enabled = true;
+
+            // Set state for selected group if provided
+            if (selectedGroup.HasValue)
+            {
+                var selectedRadio = selectedGroup.Value switch
+                {
+                    VerbGroupEnum.Godan => 五段,
+                    VerbGroupEnum.Ichidan => 一段,
+                    VerbGroupEnum.Irregular => 不規則,
+                    _ => 五段
+                };
+
+                selectedRadio.Checked = true;
+
+                // Set color based on correctness
+                if (isCorrect.HasValue)
+                {
+                    selectedRadio.ForeColor = isCorrect.Value
+                        ? ColourConstants.LabelCorrectColour
+                        : ColourConstants.LabelIncorrectColour;
+                }
+            }
+
+            // Keep radio buttons enabled to preserve color display
+            // We prevent interaction via event handling when locked
+            五段.Enabled = true;
+            一段.Enabled = true;
+            不規則.Enabled = true;
+            checkVerbGroupButton.Enabled = !lockSelection;
+
+            verbGroup.ResumeLayout();
+        }
+
+        /// <summary>
+        /// Prevents radio button changes when verb group is locked (answered correctly).
+        /// </summary>
+        private void PreventVerbGroupChange(object? sender, EventArgs e)
+        {
+            if (_verbGroupLocked && sender is RadioButton radio)
+            {
+                // Revert the change by restoring the correct selection
+                if (_currentVerb != null && _appOptions.PersistUserAnswers && _currentVerb.VerbGroupAnsweredCorrectly)
+                {
+                    var correctGroup = _currentVerb.Group;
+                    var correctRadio = correctGroup switch
+                    {
+                        VerbGroupEnum.Godan => 五段,
+                        VerbGroupEnum.Ichidan => 一段,
+                        VerbGroupEnum.Irregular => 不規則,
+                        _ => 五段
+                    };
+                    
+                    // If they tried to change from the correct one, revert it
+                    if (radio != correctRadio)
+                    {
+                        radio.Checked = false;
+                        correctRadio.Checked = true;
+                    }
+                }
+            }
         }
 
         private bool TryGetSelectedVerbGroupGuess(out VerbGroupEnum guess)
@@ -254,7 +470,7 @@ namespace JapaneseVerbConjugation
         private Dictionary<ConjugationFormEnum, IReadOnlyList<string>> BuildExpectedAnswersForCurrentVerb()
         {
             if (_currentVerb is null)
-                throw new NullReferenceException("Current verb is not set.");
+                return [];
 
             var dict = new Dictionary<ConjugationFormEnum, IReadOnlyList<string>>();
 
@@ -299,36 +515,28 @@ namespace JapaneseVerbConjugation
                 full: full,
                 baseFont: Font);
         }
+
         private static string MaskHint(string answer)
         {
-            // keep kanji, mask hiragana, leave punctuation as-is
-            return new string([.. answer.Select(c =>
-            {
-                bool isHiragana = c >= '\u3040' && c <= '\u309F';
-                return isHiragana ? '＊' : c;
-            })]);
+            return new string([.. answer
+                .Select((c, i) =>
+                {
+                    if (!IsHiragana(c))
+                        return c;
+
+                    bool isLast = i == answer.Length - 1;
+                    bool prevIsHiragana = i > 0 && IsHiragana(answer[i - 1]);
+
+                    // Keep final hiragana only if there is more than one
+                    if (isLast && prevIsHiragana)
+                        return c;
+
+                    return '＊';
+                })]);
         }
 
-        private static string MaskAnswer(string s)
-        {
-            // Simple masking: show first char + last char, mask the middle
-            // e.g. 食べて -> 食**て, たべません -> た*****ん
-            s = s.Trim();
-            if (s.Length <= 2) return s;
-
-            var first = s[0];
-            var last = s[^1];
-            return first + new string('＊', s.Length - 2) + last;
-        }
-
-        private static bool ContainsKanji(string s)
-            => s.Any(c => c >= '\u4E00' && c <= '\u9FFF');
-
-        private static bool LooksLikeKana(string s)
-            => s.All(c =>
-                (c >= '\u3040' && c <= '\u309F') || // hiragana
-                (c >= '\u30A0' && c <= '\u30FF') || // katakana
-                c == 'ー');
+        private static bool IsHiragana(char c)
+            => c >= '\u3040' && c <= '\u309F';
 
         private void ChangeUserOptions(object sender, EventArgs e)
         {
@@ -361,7 +569,7 @@ namespace JapaneseVerbConjugation
 
         private void ShowImportDialog(object? sender, EventArgs e)
         {
-            _verbStore ??= VerbStoreStore.LoadOrCreateDefault();
+            var verbStoreEmptyBeforeImport = _verbStore.Verbs.Count == 0;
 
             var customPath = CustomCsvStore.EnsureExists();
 
@@ -396,6 +604,13 @@ namespace JapaneseVerbConjugation
                             VerbImportService.RowStatus.Error =>
                                 new ImportLogLine(ev.Message, ImportLogColour.Error),
 
+                            VerbImportService.RowStatus.Summary =>
+                                // Color code summary lines: Added=Green, Skipped=Orange, Errored=Red, Total=Neutral
+                                new ImportLogLine(ev.Message, ev.Message.StartsWith("Added:", StringComparison.Ordinal) ? ImportLogColour.Added :
+                                                              ev.Message.StartsWith("Skipped:", StringComparison.Ordinal) ? ImportLogColour.Duplicate :
+                                                              ev.Message.StartsWith("Errored:", StringComparison.Ordinal) ? ImportLogColour.Error :
+                                                              ImportLogColour.Neutral),
+
                             _ =>
                                 new ImportLogLine(ev.Message, ImportLogColour.Neutral),
                         });
@@ -407,6 +622,57 @@ namespace JapaneseVerbConjugation
 
             using var form = new ImportPacksForm(RunImport, customPath);
             form.ShowDialog(this);
+
+            // Unlock + load first verb only if we were empty before
+            if (verbStoreEmptyBeforeImport && _verbStore.Verbs.Count > 0)
+            {
+                SetStudyUiEnabled(true);
+                LoadNextVerb(_verbStore.Verbs[0]);
+            }
+        }
+
+        private void SetStudyUiEnabled(bool enabled)
+        {
+            conjugationTableLayout.Enabled = enabled;
+            checkVerbGroupButton.Enabled = enabled;
+            optionsButton.Enabled = enabled;
+            verbGroup.Enabled = enabled;
+            nextVerbButton.Enabled = enabled;
+        }
+
+        private void SkipToNextVerb(object sender, EventArgs e)
+        {
+            if (_currentVerb is null || _verbStore.Verbs.Count == 0)
+                return;
+
+            // Save all current answers before moving to next verb
+            PersistAllCurrentAnswers();
+
+            // Find current verb index
+            int currentIndex = _verbStore.Verbs.FindIndex(v => v.Id == _currentVerb.Id);
+            if (currentIndex < 0)
+                return;
+
+            // Get next verb (wrap around to start if at end)
+            int nextIndex = (currentIndex + 1) % _verbStore.Verbs.Count;
+            var nextVerb = _verbStore.Verbs[nextIndex];
+
+            LoadNextVerb(nextVerb);
+            
+            // Refresh UI controls to show the new verb's state
+            foreach (var c in conjugationTableLayout.Controls)
+            {
+                if (c is ConjugationEntryControl control)
+                {
+                    control.RefreshFromState();
+                }
+            }
+        }
+
+        private void ClearAnswers(object sender, EventArgs e)
+        {
+            //TODO Make sure we load a popup that says you will lose all your progress
+            // then clear all the answers from the _entryStates and the user data storage
         }
     }
 }

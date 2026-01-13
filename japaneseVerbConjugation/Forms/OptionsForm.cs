@@ -1,5 +1,6 @@
 ﻿using JapaneseVerbConjugation.Enums;
 using JapaneseVerbConjugation.Models;
+using JapaneseVerbConjugation.SharedResources.Constants;
 
 namespace JapaneseVerbConjugation.Forms
 {
@@ -108,7 +109,8 @@ namespace JapaneseVerbConjugation.Forms
         {
             _conjugations.Items.Clear();
 
-            foreach (var form in Enum.GetValues<ConjugationFormEnum>().Where(form => form.ToString() != "Dictionary"))
+            foreach (var form in Enum.GetValues<ConjugationFormEnum>()
+                .Where(form => form.ToString() != ConjugationNameConstants.DictionaryFormConst))
             {
                 _conjugations.Items.Add(form, false);
             }
