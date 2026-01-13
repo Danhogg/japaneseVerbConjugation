@@ -371,6 +371,9 @@ SECURITY_NOTES.md
 # Release guide (private documentation, just for reference)
 RELEASE_GUIDE.md
 
+# Release build guide (contains local directory paths)
+RELEASE_BUILD_GUIDE.md
+
 # Release build output folder (build artifacts)
 Release/
 JapaneseConjugationTraining-*/
