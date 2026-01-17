@@ -108,6 +108,24 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
                 Store);
         }
 
+        public bool ClearCurrentVerbData(List<ConjugationEntryState> entryStates)
+        {
+            if (CurrentVerb is null)
+                return false;
+
+            CurrentVerb.Conjugations.Clear();
+            CurrentVerb.VerbGroupAnsweredCorrectly = false;
+            VerbStoreStore.Save(Store);
+
+            foreach (var entry in entryStates)
+            {
+                entry.UserInput = string.Empty;
+                entry.Result = ConjugationResultEnum.Unchecked;
+            }
+
+            return true;
+        }
+
         public VerbGroupCheckResult CheckVerbGroup(VerbGroupEnum guess)
         {
             var correct = CurrentVerb?.Group ?? throw new NullReferenceException("Current verb is not set.");
