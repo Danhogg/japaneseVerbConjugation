@@ -16,8 +16,28 @@ function Fail([string]$message) {
 $project = "JapaneseVerbConjugation.AvaloniaUI\JapaneseVerbConjugation.AvaloniaUI.csproj"
 if (-not (Test-Path $project)) { Fail "Avalonia project not found: $project" }
 
+# Read version from MSBuild (VersionPrefix or Version)
+$version = $null
+try {
+    $vp = (dotnet msbuild $project -getProperty:VersionPrefix -nologo | Where-Object { $_ -and $_.Trim() }) | Select-Object -Last 1
+    if ($vp) {
+        $version = $vp.Trim()
+    }
+    if ([string]::IsNullOrWhiteSpace($version)) {
+        $v = (dotnet msbuild $project -getProperty:Version -nologo | Where-Object { $_ -and $_.Trim() }) | Select-Object -Last 1
+        if ($v) {
+            $version = $v.Trim()
+        }
+    }
+} catch {
+    $version = $null
+}
+if ([string]::IsNullOrWhiteSpace($version)) {
+    $version = "0.0.0"
+}
+
 if ([string]::IsNullOrWhiteSpace($OutputFolder)) {
-    $OutputFolder = "JapaneseConjugationTraining-Avalonia-local-$Runtime"
+    $OutputFolder = "JapaneseConjugationTraining-Avalonia-v$version-$Runtime"
 }
 
 Write-Host "Publishing Avalonia ($Configuration, $Runtime)..." -ForegroundColor Cyan
@@ -34,12 +54,12 @@ dotnet publish $project `
 
 if ($LASTEXITCODE -ne 0) { Fail "Publish failed." }
 
-Write-Host "Copying CSV data files..." -ForegroundColor Yellow
+Write-Host "Copying data files..." -ForegroundColor Yellow
 $dataDir = Join-Path $OutputFolder "Data"
 New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
 
 $src = "JapaneseVerbConjugation.Core\Data"
-$files = @("N5.csv", "N4.csv")
+$files = @("N5.csv", "N4.csv", "jmdict-eng-3.6.1.json.gz")
 foreach ($f in $files) {
     $from = Join-Path $src $f
     $to = Join-Path $dataDir $f

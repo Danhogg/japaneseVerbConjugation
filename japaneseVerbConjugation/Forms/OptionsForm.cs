@@ -9,7 +9,6 @@ namespace JapaneseVerbConjugation.Forms
         private readonly CheckBox _showFurigana = new() { Text = "Show Furigana" };
         private readonly CheckBox _allowHiragana = new() { Text = "Allow Hiragana" };
         private readonly CheckBox _focusOnly = new() { Text = "Focus mode only" };
-        private readonly CheckBox _persistAnswers = new() { Text = "Persist user answers" };
 
         private readonly CheckedListBox _conjugations = new()
         {
@@ -68,12 +67,10 @@ namespace JapaneseVerbConjugation.Forms
             _showFurigana.AutoSize = true;
             _allowHiragana.AutoSize = true;
             _focusOnly.AutoSize = true;
-            _persistAnswers.AutoSize = true;
 
             top.Controls.Add(_showFurigana);
             top.Controls.Add(_allowHiragana);
             top.Controls.Add(_focusOnly);
-            top.Controls.Add(_persistAnswers);
 
             // Conjugations checklist
             var group = new GroupBox
@@ -127,7 +124,6 @@ namespace JapaneseVerbConjugation.Forms
             _showFurigana.Checked = options.ShowFurigana;
             _allowHiragana.Checked = options.AllowHiragana;
             _focusOnly.Checked = options.FocusModeOnly;
-            _persistAnswers.Checked = options.PersistUserAnswers;
 
             // mark enabled
             for (int i = 0; i < _conjugations.Items.Count; i++)
@@ -142,7 +138,6 @@ namespace JapaneseVerbConjugation.Forms
             Result.ShowFurigana = _showFurigana.Checked;
             Result.AllowHiragana = _allowHiragana.Checked;
             Result.FocusModeOnly = _focusOnly.Checked;
-            Result.PersistUserAnswers = _persistAnswers.Checked;
 
             Result.EnabledConjugations.Clear();
             for (int i = 0; i < _conjugations.Items.Count; i++)
@@ -161,7 +156,6 @@ namespace JapaneseVerbConjugation.Forms
             ShowFurigana = o.ShowFurigana,
             AllowHiragana = o.AllowHiragana,
             FocusModeOnly = o.FocusModeOnly,
-            PersistUserAnswers = o.PersistUserAnswers,
             EnabledConjugations = [.. o.EnabledConjugations]
         };
     }

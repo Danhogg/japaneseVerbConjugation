@@ -23,6 +23,9 @@ namespace JapaneseVerbConjugation.SharedResources.Methods
             s = s.Trim('\"', '\'', ' ', '\t');
             s = s.TrimEnd(',', '，', '。');
 
+            // Remove internal whitespace and common separator dots to improve lookups
+            s = new string(s.Where(c => !char.IsWhiteSpace(c) && c != '・' && c != '･').ToArray());
+
             return s;
         }
     }

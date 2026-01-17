@@ -68,7 +68,6 @@ namespace JapaneseVerbConjugation
 
             bool focusModeChanged = oldOptions.FocusModeOnly != newOptions.FocusModeOnly;
 
-            bool persistAnswersChanged = oldOptions.PersistUserAnswers != newOptions.PersistUserAnswers;
 
             // Store first (so any subsequent logic reads the new options)
             _session.UpdateOptions(newOptions);
@@ -91,8 +90,6 @@ namespace JapaneseVerbConjugation
             if (focusModeChanged || startUp)
                 ApplyFocusFilter(); // later; can be empty for now
 
-            if (persistAnswersChanged || startUp)
-                ApplyPersistencePolicyUi(); // probably nothing visual
         }
 
         private void RebuildConjugationRows()
@@ -354,7 +351,6 @@ namespace JapaneseVerbConjugation
             {
                 // Revert the change by restoring the correct selection
                 if (_session.CurrentVerb != null &&
-                    _session.Options.PersistUserAnswers &&
                     _session.CurrentVerb.VerbGroupAnsweredCorrectly)
                 {
                     var correctGroup = _session.CurrentVerb.Group;

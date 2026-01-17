@@ -71,6 +71,15 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
             LogLines.Clear();
             AppendLog("Starting import...", Brushes.Gray);
 
+            var dictionaryPath = DataPathProvider.TryResolveDataFile(DataFileConstants.DictionaryFileName);
+            if (dictionaryPath == null)
+            {
+                AppendLog($"Missing dictionary: {DataFileConstants.DictionaryFileName}", Brushes.Red);
+                AppendLog($"Expected under: {DataPathProvider.GetDataRoot()}", Brushes.DimGray);
+                IsImporting = false;
+                return false;
+            }
+
             var files = new List<string>();
             if (ImportN5)
             {

@@ -13,11 +13,14 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
 
         public ConjugationEntryState State { get; }
         public string Label { get; }
+        public bool IsMultiLineLabel { get; }
 
         public ConjugationEntryViewModel(ConjugationEntryState state)
         {
             State = state;
             Label = state.ConjugationForm.ToDisplayLabel();
+            IsMultiLineLabel = state.ConjugationForm is ConjugationFormEnum.CausativePassivePlain
+                or ConjugationFormEnum.CausativePassivePolite;
             RefreshFromState();
         }
 
@@ -45,6 +48,8 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
                     OnPropertyChanged(nameof(ResultBackground));
                     OnPropertyChanged(nameof(IsCheckEnabled));
                     OnPropertyChanged(nameof(IsHintEnabled));
+                    OnPropertyChanged(nameof(IsInputReadOnly));
+                    OnPropertyChanged(nameof(IsInputHitTestVisible));
                 }
             }
         }
@@ -75,6 +80,11 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
 
         public bool IsCheckEnabled => Result != ConjugationResultEnum.Correct;
         public bool IsHintEnabled => Result != ConjugationResultEnum.Correct;
+        public bool IsInputReadOnly => Result == ConjugationResultEnum.Correct;
+        public bool IsInputHitTestVisible => Result != ConjugationResultEnum.Correct;
+        public double RowHeight => IsMultiLineLabel ? 48 : 36;
+        public Avalonia.Layout.VerticalAlignment LabelVerticalAlignment
+            => IsMultiLineLabel ? Avalonia.Layout.VerticalAlignment.Top : Avalonia.Layout.VerticalAlignment.Center;
 
         public void RefreshFromState()
         {

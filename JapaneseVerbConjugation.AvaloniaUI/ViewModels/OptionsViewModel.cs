@@ -11,14 +11,12 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
         private bool _showFurigana;
         private bool _allowHiragana;
         private bool _focusModeOnly;
-        private bool _persistUserAnswers;
 
         public OptionsViewModel(AppOptions current)
         {
             _showFurigana = current.ShowFurigana;
             _allowHiragana = current.AllowHiragana;
             _focusModeOnly = current.FocusModeOnly;
-            _persistUserAnswers = current.PersistUserAnswers;
 
             Conjugations = new ObservableCollection<ConjugationOptionViewModel>();
             foreach (var form in Enum.GetValues<ConjugationFormEnum>())
@@ -50,20 +48,13 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
             set => SetProperty(ref _focusModeOnly, value);
         }
 
-        public bool PersistUserAnswers
-        {
-            get => _persistUserAnswers;
-            set => SetProperty(ref _persistUserAnswers, value);
-        }
-
         public AppOptions BuildResult()
         {
             var options = new AppOptions
             {
                 ShowFurigana = ShowFurigana,
                 AllowHiragana = AllowHiragana,
-                FocusModeOnly = FocusModeOnly,
-                PersistUserAnswers = PersistUserAnswers
+                FocusModeOnly = FocusModeOnly
             };
 
             options.EnabledConjugations.Clear();

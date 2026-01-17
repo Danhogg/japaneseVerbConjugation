@@ -12,16 +12,10 @@ namespace JapaneseVerbConjugation
         [STAThread]
         static void Main()
         {
-            var baseData = Path.Combine(AppContext.BaseDirectory, "Data");
-            if (Directory.Exists(baseData))
-            {
-                DataPathProvider.SetDataRoot(baseData);
-            }
-            else
-            {
-                var devData = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "JapaneseVerbConjugation.Core", "Data"));
-                DataPathProvider.SetDataRoot(devData);
-            }
+            var baseDir = AppContext.BaseDirectory;
+            var baseData = Path.Combine(baseDir, "Data");
+            var devData = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "JapaneseVerbConjugation.Core", "Data"));
+            DataPathProvider.SetDataRootFromCandidates(baseData, devData);
             // To customize application configuration such as set high DPI settings or default font,
             // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();

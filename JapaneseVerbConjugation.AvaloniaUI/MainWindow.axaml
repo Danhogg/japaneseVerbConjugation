@@ -78,18 +78,21 @@
                     <DataTemplate>
                         <Grid ColumnDefinitions="130,*,60,50,24"
                               ColumnSpacing="3"
-                              Height="36"
+                              Height="{Binding RowHeight}"
                               Width="{Binding ElementName=EntriesHost, Path=Bounds.Width, Converter={StaticResource ColumnWidthConverter}}">
                                 <TextBlock Grid.Column="0"
                                            Text="{Binding Label}"
                                            FontSize="14"
-                                           VerticalAlignment="Center" />
+                                       TextWrapping="Wrap"
+                                       VerticalAlignment="{Binding LabelVerticalAlignment}" />
                                 <TextBox Grid.Column="1"
                                          Text="{Binding UserInput, Mode=TwoWay}"
                                          FontSize="14"
                                          FontWeight="Bold"
                                          Height="32"
                                          Background="{Binding ResultBackground}"
+                                         IsReadOnly="{Binding IsInputReadOnly}"
+                                         IsHitTestVisible="{Binding IsInputHitTestVisible}"
                                          VerticalContentAlignment="Center" />
                                 <Button Grid.Column="2"
                                         Content="Check"

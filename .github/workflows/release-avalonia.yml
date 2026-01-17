@@ -93,7 +93,7 @@ jobs:
             -p:EnableCompressionInSingleFile=true `
             -o $outDir
 
-      - name: Copy CSV data files
+      - name: Copy data files
         shell: pwsh
         run: |
           $outDir = "${{ steps.meta.outputs.outDir }}"
@@ -101,7 +101,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
 
           $src = "JapaneseVerbConjugation.Core\Data"
-          $files = @("N5.csv", "N4.csv")
+          $files = @("N5.csv", "N4.csv", "jmdict-eng-3.6.1.json.gz")
           foreach ($f in $files) {
             $from = Join-Path $src $f
             $to = Join-Path $dataDir $f

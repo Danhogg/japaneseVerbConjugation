@@ -25,10 +25,4 @@
     <ProjectReference Include="..\JapaneseVerbConjugation.Core\JapaneseVerbConjugation.Core.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Content Include="..\JapaneseVerbConjugation.Core\Data\jmdict-eng-3.6.1.json.gz">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <None Remove="..\JapaneseVerbConjugation.Core\Data\jmdict-eng-3.6.1+20260105122906.json.zip" />
-  </ItemGroup>
 </Project>

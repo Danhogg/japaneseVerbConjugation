@@ -21,7 +21,7 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
             AppOptions options,
             VerbStore store)
         {
-            if (!options.PersistUserAnswers || verb is null)
+            if (verb is null)
                 return;
 
             // Save the user's input as the source of truth
@@ -59,7 +59,7 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
             AppOptions options,
             VerbStore store)
         {
-            if (!options.PersistUserAnswers || verb is null)
+            if (verb is null)
                 return;
 
             bool anyChanges = false;

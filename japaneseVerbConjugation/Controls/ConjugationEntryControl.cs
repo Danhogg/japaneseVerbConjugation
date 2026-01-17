@@ -31,6 +31,7 @@ namespace JapaneseVerbConjugation.Controls
 
             BuildLayout();
             BindState();
+            ApplyLabelLayout();
         }
 
         private void BindState()
@@ -59,6 +60,9 @@ namespace JapaneseVerbConjugation.Controls
 
             _label.Dock = DockStyle.Fill;
             _label.TextAlign = ContentAlignment.MiddleLeft;
+            _label.AutoEllipsis = false;
+            _label.AutoSize = true;
+            _label.MaximumSize = new Size(150, 0);
 
             _inputTextArea.Dock = DockStyle.Fill;
             _inputTextArea.Multiline = true;
@@ -66,6 +70,13 @@ namespace JapaneseVerbConjugation.Controls
             _inputTextArea.Font = new Font("Yu Gothic UI", 14F, FontStyle.Bold);
             _inputTextArea.TextChanged += (_, _) =>
                 ConjugationEntryState.UserInput = _inputTextArea.Text;
+            _inputTextArea.MouseDown += (_, _) =>
+            {
+                if (_inputTextArea.ReadOnly)
+                {
+                    Parent?.Focus();
+                }
+            };
 
             _checkButton.Text = "Check";
             _checkButton.Dock = DockStyle.Fill;
@@ -113,6 +124,9 @@ namespace JapaneseVerbConjugation.Controls
                     _resultLabel.ForeColor = ColourConstants.LabelCorrectColour;
                     _inputTextArea.BackColor = ColourConstants.TextAreaCorrectColour;
                     _inputTextArea.BorderStyle = BorderStyle.FixedSingle;
+                    _inputTextArea.ReadOnly = true;
+                    _inputTextArea.TabStop = false;
+                    _inputTextArea.ShortcutsEnabled = false;
                     break;
 
                 case ConjugationResultEnum.Incorrect:
@@ -120,6 +134,9 @@ namespace JapaneseVerbConjugation.Controls
                     _resultLabel.ForeColor = ColourConstants.LabelIncorrectColour;
                     _inputTextArea.BackColor = ColourConstants.TextAreaIncorrectColour;
                     _inputTextArea.BorderStyle = BorderStyle.FixedSingle;
+                    _inputTextArea.ReadOnly = false;
+                    _inputTextArea.TabStop = true;
+                    _inputTextArea.ShortcutsEnabled = true;
                     break;
 
                 case ConjugationResultEnum.Close:
@@ -127,6 +144,9 @@ namespace JapaneseVerbConjugation.Controls
                     _resultLabel.ForeColor = ColourConstants.LabelCloseColour;
                     _inputTextArea.BackColor = ColourConstants.TextAreaCloseColour;
                     _inputTextArea.BorderStyle = BorderStyle.FixedSingle;
+                    _inputTextArea.ReadOnly = false;
+                    _inputTextArea.TabStop = true;
+                    _inputTextArea.ShortcutsEnabled = true;
                     break;
 
                 default:
@@ -134,11 +154,32 @@ namespace JapaneseVerbConjugation.Controls
                     _inputTextArea.BackColor = SystemColors.Window;
                     _inputTextArea.BorderStyle = BorderStyle.FixedSingle;
                     _checkButton.Enabled = true;
+                    _inputTextArea.ReadOnly = false;
+                    _inputTextArea.TabStop = true;
+                    _inputTextArea.ShortcutsEnabled = true;
                     break;
             }
 
             _checkButton.Enabled = ConjugationEntryState.Result != ConjugationResultEnum.Correct;
             _hintButton.Enabled = ConjugationEntryState.Result != ConjugationResultEnum.Correct;
+        }
+
+        private void ApplyLabelLayout()
+        {
+            bool multiLine = ConjugationEntryState.ConjugationForm is
+                ConjugationFormEnum.CausativePassivePlain or
+                ConjugationFormEnum.CausativePassivePolite;
+
+            if (multiLine)
+            {
+                Height = 48;
+                _label.TextAlign = ContentAlignment.TopLeft;
+            }
+            else
+            {
+                Height = 36;
+                _label.TextAlign = ContentAlignment.MiddleLeft;
+            }
         }
     }
 }

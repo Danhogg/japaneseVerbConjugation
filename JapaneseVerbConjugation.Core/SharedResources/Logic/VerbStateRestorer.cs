@@ -19,7 +19,7 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
             Dictionary<ConjugationFormEnum, IReadOnlyList<string>> expectedAnswers,
             AppOptions options)
         {
-            if (!options.PersistUserAnswers || verb.Conjugations.Count == 0)
+            if (verb.Conjugations.Count == 0)
                 return;
 
             foreach (var entry in entryStates)
@@ -46,7 +46,7 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
             AppOptions options,
             Action<VerbGroupEnum?, bool?, bool> setVerbGroupState)
         {
-            if (options.PersistUserAnswers && verb.VerbGroupAnsweredCorrectly)
+            if (verb.VerbGroupAnsweredCorrectly)
             {
                 setVerbGroupState(verb.Group, true, true);
             }

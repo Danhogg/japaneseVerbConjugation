@@ -9,7 +9,8 @@ namespace JapaneseVerbConjugation.SharedResources.Constants
         /// </summary>
         public static string GetVersion()
         {
-            var version = Assembly.GetExecutingAssembly().GetName().Version;
+            var version = Assembly.GetEntryAssembly()?.GetName().Version
+                ?? Assembly.GetExecutingAssembly().GetName().Version;
             if (version == null)
                 return "Unknown";
 

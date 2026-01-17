@@ -113,7 +113,7 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
             var correct = CurrentVerb?.Group ?? throw new NullReferenceException("Current verb is not set.");
             bool isCorrect = guess == correct;
 
-            if (isCorrect && Options.PersistUserAnswers && CurrentVerb != null)
+            if (isCorrect && CurrentVerb != null)
             {
                 CurrentVerb.VerbGroupAnsweredCorrectly = true;
                 VerbStoreStore.Save(Store);
@@ -127,7 +127,7 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
             if (CurrentVerb is null)
                 return new VerbGroupState(null, false, false);
 
-            if (Options.PersistUserAnswers && CurrentVerb.VerbGroupAnsweredCorrectly)
+            if (CurrentVerb.VerbGroupAnsweredCorrectly)
             {
                 return new VerbGroupState(CurrentVerb.Group, true, true);
             }

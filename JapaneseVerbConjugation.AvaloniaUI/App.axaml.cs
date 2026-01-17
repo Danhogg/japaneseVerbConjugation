@@ -18,16 +18,10 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            var baseData = Path.Combine(AppContext.BaseDirectory, "Data");
-            if (Directory.Exists(baseData))
-            {
-                DataPathProvider.SetDataRoot(baseData);
-            }
-            else
-            {
-                var devData = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "JapaneseVerbConjugation.Core", "Data"));
-                DataPathProvider.SetDataRoot(devData);
-            }
+            var baseDir = AppContext.BaseDirectory;
+            var baseData = Path.Combine(baseDir, "Data");
+            var devData = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "JapaneseVerbConjugation.Core", "Data"));
+            DataPathProvider.SetDataRootFromCandidates(baseData, devData);
             desktop.MainWindow = new MainWindow();
         }
 

@@ -17,16 +17,6 @@
     <ProjectReference Include="..\JapaneseVerbConjugation.Core\JapaneseVerbConjugation.Core.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Remove="..\JapaneseVerbConjugation.Core\Data\jmdict-eng-3.6.1+20260105122906.json.zip" />
-    <None Remove="..\JapaneseVerbConjugation.Core\Data\jmdict-eng-3.6.1.json.gz" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="..\JapaneseVerbConjugation.Core\Data\jmdict-eng-3.6.1.json.gz">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <DebugType>none</DebugType>

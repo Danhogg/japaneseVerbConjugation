@@ -23,7 +23,6 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
 
                 return options ?? new AppOptions
                 {
-                    PersistUserAnswers = true,
                     ShowFurigana = true,
                     AllowHiragana = false,
                     FocusModeOnly = false,
@@ -36,7 +35,6 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
                 // If file is corrupt or schema mismatched, fall back safely
                 return new AppOptions
                 {
-                    PersistUserAnswers = true,
                     ShowFurigana = true,
                     AllowHiragana = false,
                     FocusModeOnly = false,
@@ -79,7 +77,6 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
             if (a.ShowFurigana != b.ShowFurigana) return false;
             if (a.AllowHiragana != b.AllowHiragana) return false;
             if (a.FocusModeOnly != b.FocusModeOnly) return false;
-            if (a.PersistUserAnswers != b.PersistUserAnswers) return false;
 
             // HashSet comparison
             return a.EnabledConjugations.SetEquals(b.EnabledConjugations);
