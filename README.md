@@ -17,7 +17,7 @@ Once a user has correctly got the conjugation we will disable the textbox and bu
 Longer term the plan is to track the attempts at a conjugations and try to learn what the user is good or bad at and allow them to turn on a focus mode where the app will select a few conjugations the user is bad at and then allow them to just go through these and adapt as a user get's better or worse at conjugations. Using the hint/show answer will be tracked as maybe a 2 and 5 in failed attempts to prevent missing out verbs where a user tries it once due to using the helpers.
 
 
-##General info
+## General info
 
 We don't currently track too much. Longer term I want to add a way for a user to favourite a verb for it to show up after the select the fav mode so they can train a more curated list of their choosing rather than what the app may calculate they are worse at (if a user is working towards N3 they may want to focus their own selection of verbs as opposed to N2/1 they may have been bad at or N5/4 which they may know easily for example).  
 I will also add an area that displays the level of the verb if it was imported from one of our prebuild files or longer term update the import so a user can add the level next to the verb in the CSV so we can still add the expected JLPT level and then also add a way to filter for verbs of a certain level or below a certain level at the users choosing.  
@@ -28,4 +28,4 @@ I would also like to allow the user to search through the verbs so they can pick
 
 
 
-####Curate this readme a little better and pull all desired features to add down here
+#### Curate this readme a little better and pull all desired features to add down here
