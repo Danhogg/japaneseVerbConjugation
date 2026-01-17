@@ -60,9 +60,15 @@ jobs:
         run: |
           $ref = "${{ inputs.ref }}".Trim()
           if ([string]::IsNullOrWhiteSpace($ref)) { $ref = "main" }
+          $isTag = $ref.StartsWith("v")
           git fetch --force --tags
-          git checkout --force "$ref"
-          Write-Host "Checked out $ref @ $(git rev-parse HEAD)" -ForegroundColor Green
+          if ($isTag) {
+            git checkout --force "refs/tags/$ref"
+            Write-Host "Checked out refs/tags/$ref @ $(git rev-parse HEAD)" -ForegroundColor Green
+          } else {
+            git checkout --force "$ref"
+            Write-Host "Checked out $ref @ $(git rev-parse HEAD)" -ForegroundColor Green
+          }
 
       - name: Compute version + output names
         id: meta
@@ -93,6 +99,10 @@ jobs:
 
       - name: Restore
         run: dotnet restore JapaneseVerbConjugation.AvaloniaUI/JapaneseVerbConjugation.AvaloniaUI.csproj
+
+      - name: Run tests (Windows only)
+        if: matrix.os == 'windows-latest'
+        run: dotnet test japaneseVerbConjugationTests/japaneseVerbConjugationTests.csproj -c Release
 
       - name: Publish (Release, self-contained)
         shell: pwsh
