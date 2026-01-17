@@ -4,11 +4,12 @@
 The aim of this app is to make it easier for people to study verb conjugations in Japanese. There are a lot of conjugations so this app is to help people remember how to conjugate verbs quickly. There are also many different verbs that sound similar or don't obviously fall into godan or ichidan. This should help practice that quickly and also help users learn which groups the verbs fall into (obvious when you have time to think but hard when you are less familiar or trying to talk quick)
 
 ## Current features
-###Import
+
+### Import
 A user can import from a preset list of N5/N4 verbs (this will be extended to include N3-N1 as well longer term) and a custom list that a user can define if they don't want everything and wanted a more targetted experience for now.
 Currently the import drags the reading from the JMDict, but this is currently imperfect and some things won't be brought in. There is no solution around this right now but the plan is to return a list of verbs which were not added and allow the user to set the group on them and also the furigana reading. This is all that is needed to allow the conjugation engine to then give you the correct answers to your attempted conjugations.
 
-## Conjugation checks
+### Conjugation checks
 You can type in conjugation checks into the textboxes next to the labels. This is by default set to accept Kanji only (given you have the kanji right in front of you) but you can change it to also allow hiragana if you really want. Within the options you can also cusomtise which conjugations are shown for the verbs. If you are very confident with certain conjugations or if you haven't studied certain conjugations yet you can disable them to only see what you know or want. 
 We have a hint button that initially shows a user the ending of the conjugation to hopefully guide them in the correct direction. After that we have a show answer to help the user if they are really stuck.
 Once a user has correctly got the conjugation we will disable the textbox and buttons for hint and check. We then have a close which shows the user the are out by one kana, either incorrect hiragana kana or just missing a kana, and then a wrong for a user being completely off.  
