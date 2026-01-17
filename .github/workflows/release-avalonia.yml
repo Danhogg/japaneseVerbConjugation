@@ -6,10 +6,23 @@ on:
       - "v*"
   workflow_dispatch:
     inputs:
-      tag:
-        description: "Existing tag to build (e.g. v1.3.0)"
-        required: true
+      ref:
+        description: "Branch, tag, or commit to build (e.g. main)"
+        required: false
+        default: "main"
         type: string
+      version:
+        description: "Optional version override (e.g. 2.0.1)"
+        required: false
+        type: string
+      create_release:
+        description: "Create/overwrite GitHub Release"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
 
 permissions:
   contents: write
@@ -41,29 +54,34 @@ jobs:
           Write-Host "Checked out $env:GITHUB_REF @ $(git rev-parse HEAD)" -ForegroundColor Green
           git describe --tags --exact-match
 
-      - name: Checkout tag commit (manual)
+      - name: Checkout ref (manual)
         if: github.event_name == 'workflow_dispatch'
         shell: pwsh
         run: |
-          $tag = "${{ inputs.tag }}".Trim()
-          if (-not $tag.StartsWith("v")) { throw "Tag must start with 'v' (e.g. v1.3.0). You entered '$tag'." }
+          $ref = "${{ inputs.ref }}".Trim()
+          if ([string]::IsNullOrWhiteSpace($ref)) { $ref = "main" }
           git fetch --force --tags
-          git rev-parse "refs/tags/$tag" | Out-Null
-          git checkout --force "refs/tags/$tag"
-          Write-Host "Checked out refs/tags/$tag @ $(git rev-parse HEAD)" -ForegroundColor Green
-          git describe --tags --exact-match
+          git checkout --force "$ref"
+          Write-Host "Checked out $ref @ $(git rev-parse HEAD)" -ForegroundColor Green
 
       - name: Compute version + output names
         id: meta
         shell: pwsh
         run: |
-          $tag = if ("${{ github.event_name }}" -eq "workflow_dispatch") { "${{ inputs.tag }}" } else { "${{ github.ref_name }}" }
-          $version = $tag -replace '^v', ''
+          $isManual = "${{ github.event_name }}" -eq "workflow_dispatch"
+          $version = "${{ inputs.version }}".Trim()
+          if (-not $isManual) {
+            $tag = "${{ github.ref_name }}"
+            $version = $tag -replace '^v', ''
+          } elseif ([string]::IsNullOrWhiteSpace($version)) {
+            $vp = (dotnet msbuild JapaneseVerbConjugation.AvaloniaUI/JapaneseVerbConjugation.AvaloniaUI.csproj -getProperty:VersionPrefix -nologo | Where-Object { $_ -and $_.Trim() }) | Select-Object -Last 1
+            $version = $vp.Trim()
+          }
           $rid = "${{ matrix.rid }}"
           $outDir = "JapaneseConjugationTraining-Avalonia-v$version-$rid"
           $zip = "$outDir.zip"
 
-          "tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "tag=${{ github.ref_name }}" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           "outDir=$outDir" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           "zip=$zip" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
@@ -139,6 +157,7 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || inputs.create_release == 'true'
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -151,8 +170,8 @@ jobs:
       - name: Create/Update GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
-          name: Release ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }} (Avalonia)
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }} (Avalonia)
           files: artifacts/**/*.zip
           draft: false
           prerelease: false
