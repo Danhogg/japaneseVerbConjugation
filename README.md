@@ -21,11 +21,13 @@ Longer term the plan is to track the attempts at a conjugations and try to learn
 
 We don't currently track too much. Longer term I want to add a way for a user to favourite a verb for it to show up after the select the fav mode so they can train a more curated list of their choosing rather than what the app may calculate they are worse at (if a user is working towards N3 they may want to focus their own selection of verbs as opposed to N2/1 they may have been bad at or N5/4 which they may know easily for example).  
 I will also add an area that displays the level of the verb if it was imported from one of our prebuild files or longer term update the import so a user can add the level next to the verb in the CSV so we can still add the expected JLPT level and then also add a way to filter for verbs of a certain level or below a certain level at the users choosing.  
+  
 There is a previous verb and next verb button for the user to cycle through the verbs, currently the start and end of the deck simply disable the prev or next but that will be updated too loop back around.  
 There is no way to shuffle the verbs at the minute but that will be solved long term. A shuffle button will be added so a user doesn't get the verbs in the same order all the time. That would possibly become more of a memory excerice than I want (although this is memory based it's about remembering the correct conjugation rules and styles, not just remembering the order of the verbs for the order of how to conjugate, I hope that sentence  makes sense to you it does to me)  
-There will also be a clear method yet to be hooked up but the button is there. It will allow a user to clear the progress made on the verb so they can repractice. We will also add a more powerful clear that will let the user clear all conjugations or conjugations for certain levels.  
+
 I would also like to allow the user to search through the verbs so they can pick ones they are bad at easier than filtering down to a fav list which may be rather large, and while I think about it it may be good to allow a user to filter based on the verb group as ichidan becomes very easy over time but godan can conjugate different based on the ending which can mean more practice is useful. Maybe being able to break down only showing godan and then further only showing certain endings would be nice
 
 
 
 #### Curate this readme a little better and pull all desired features to add down here
+We will also add a more powerful clear that will let the user clear all conjugations or conjugations for certain levels.  
