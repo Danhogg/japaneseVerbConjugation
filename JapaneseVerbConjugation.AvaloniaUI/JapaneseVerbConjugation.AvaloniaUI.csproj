@@ -25,4 +25,12 @@
     <ProjectReference Include="..\JapaneseVerbConjugation.Core\JapaneseVerbConjugation.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <AvaloniaXaml Remove="**\*.axaml" />
+    <AvaloniaXaml Include="App.axaml" />
+    <AvaloniaXaml Include="MainWindow.axaml" />
+    <AvaloniaXaml Include="OptionsWindow.axaml" />
+    <AvaloniaXaml Include="ImportWindow.axaml" />
+  </ItemGroup>
+
 </Project>

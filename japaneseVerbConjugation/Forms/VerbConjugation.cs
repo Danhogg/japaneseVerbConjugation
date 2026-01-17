@@ -247,8 +247,20 @@ namespace JapaneseVerbConjugation
 
         private void ClearAnswers(object sender, EventArgs e)
         {
-            //TODO Make sure we load a popup that says you will lose all your progress
-            // then clear all the answers from the _entryStates and the user data storage
+            if (_session.CurrentVerb is null)
+                return;
+
+            var result = MessageBox.Show(
+                "This will remove all saved answers for the current verb. Are you sure?",
+                "Clear conjugation data",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning);
+
+            if (result != DialogResult.Yes)
+                return;
+
+            _session.ClearCurrentVerbData(_entryStates);
+            RefreshUiFromSession();
         }
 
         #endregion

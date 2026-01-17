@@ -44,7 +44,7 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
             SelectVerbGroupCommand = new RelayCommand(SelectVerbGroup);
             OptionsCommand = new RelayCommand(async _ => await ShowOptionsAsync());
             ImportCommand = new RelayCommand(async _ => await ShowImportAsync());
-            ClearCommand = new RelayCommand(_ => ShowInfo("Not implemented", "Clear is not implemented yet."), _ => IsClearEnabled);
+            ClearCommand = new RelayCommand(_ => _ = ClearAsync(), _ => IsClearEnabled);
 
             WindowTitle = VersionInfo.GetApplicationTitle();
 
@@ -99,7 +99,7 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
             }
         }
 
-        public bool IsClearEnabled => false;
+        public bool IsClearEnabled => _session.CurrentVerb != null;
 
         public bool IsCheckVerbGroupEnabled => !_verbGroupLocked;
         public bool IsVerbGroupHitTestEnabled => !_verbGroupLocked;
@@ -153,6 +153,7 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
             UpdateNavigation();
 
             OnPropertyChanged(nameof(ShowFurigana));
+            OnPropertyChanged(nameof(IsClearEnabled));
         }
 
         private void SetStudyUiEnabled(bool enabled)
@@ -164,6 +165,8 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
                 CanPrev = false;
                 CanNext = false;
             }
+
+            OnPropertyChanged(nameof(IsClearEnabled));
         }
 
         private void UpdateNavigation()
@@ -341,6 +344,32 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
                 WindowStartupLocation = WindowStartupLocation.CenterOwner
             };
             dialog.ShowDialog(_owner);
+        }
+
+        private async Task ClearAsync()
+        {
+            if (_session.CurrentVerb is null)
+                return;
+
+            var dialog = new ConfirmWindow(
+                "Clear conjugation data",
+                "This will remove all saved answers for the current verb. Are you sure?",
+                "Clear",
+                "Cancel")
+            {
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            };
+
+            var confirm = await dialog.ShowDialog<bool?>(_owner);
+            if (confirm != true)
+                return;
+
+            _session.ClearCurrentVerbData(_entryStates);
+            foreach (var entry in Entries)
+            {
+                entry.RefreshFromState();
+            }
+            ApplyVerbGroupState(new VerbGroupState(null, false, false));
         }
     }
 }
