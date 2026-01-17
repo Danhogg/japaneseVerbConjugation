@@ -191,7 +191,6 @@ jobs:
 
             ### Downloads
             - Windows: `*-win-x64.zip`
-            - Linux: `*-linux-x64.zip`
             - macOS: `*-osx-x64.zip`
 
             ### Notes
