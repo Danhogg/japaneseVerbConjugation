@@ -6,7 +6,6 @@ using JapaneseVerbConjugation.Models.ModelsForSerialising;
 using JapaneseVerbConjugation.SharedResources.Constants;
 using JapaneseVerbConjugation.SharedResources.Logic;
 using JapaneseVerbConjugation.SharedResources.Methods;
-using System.Diagnostics;
 
 namespace JapaneseVerbConjugation
 {
@@ -16,16 +15,7 @@ namespace JapaneseVerbConjugation
         // This is intentionally separate from UI controls for save/load later.
         private readonly List<ConjugationEntryState> _entryStates = [];
 
-        // This is our list of expected answers for the current verb. Will also be used for
-        // the hints and answers if a user needs help.
-        private Dictionary<ConjugationFormEnum, IReadOnlyList<string>> _expectedAnswers = [];
-
-        // AppOptions loaded from user settings.
-        private AppOptions _appOptions;
-
-        private readonly VerbStore _verbStore;
-
-        private Verb? _currentVerb = null;
+        private readonly VerbStudySession _session;
 
         // Track if verb group is locked (answered correctly) to prevent changes
         private bool _verbGroupLocked = false;
@@ -45,19 +35,17 @@ namespace JapaneseVerbConjugation
             一段.CheckedChanged += PreventVerbGroupChange;
             不規則.CheckedChanged += PreventVerbGroupChange;
 
-            _appOptions = AppOptionsStore.LoadOrCreateDefault();
-            _verbStore = VerbStoreStore.LoadOrCreateDefault();
+            _session = VerbStudySession.LoadFromStorage();
 
             // ApplyUserOptions will call RebuildConjugationRows() on startup
             // This creates the entry states and controls BEFORE we try to load saved answers
-            ApplyUserOptions(_appOptions, true);
+            ApplyUserOptions(_session.Options, true);
 
             // Now load the verb - entry states and controls already exist from RebuildConjugationRows
-            if (_verbStore.Verbs.Count > 0)
+            var initialVerb = _session.GetInitialVerb();
+            if (initialVerb != null)
             {
-                // Find the active verb, or use the first one if none is active
-                var activeVerb = _verbStore.Verbs.FirstOrDefault(v => v.Active) ?? _verbStore.Verbs[0];
-                LoadNextVerb(activeVerb);
+                LoadNextVerb(initialVerb);
             }
             else
             {
@@ -71,7 +59,7 @@ namespace JapaneseVerbConjugation
 
         private void ApplyUserOptions(AppOptions newOptions, bool startUp = false)
         {
-            var oldOptions = _appOptions;
+            var oldOptions = _session.Options;
 
             bool enabledConjugationsChanged =
                 !oldOptions.EnabledConjugations.SetEquals(newOptions.EnabledConjugations);
@@ -83,11 +71,17 @@ namespace JapaneseVerbConjugation
             bool persistAnswersChanged = oldOptions.PersistUserAnswers != newOptions.PersistUserAnswers;
 
             // Store first (so any subsequent logic reads the new options)
-            _appOptions = newOptions;
+            _session.UpdateOptions(newOptions);
 
             // Rebuild rows to match enabled conjugations
             if (enabledConjugationsChanged || startUp)
                 RebuildConjugationRows();
+
+            if ((enabledConjugationsChanged || startUp) && _session.CurrentVerb != null)
+            {
+                _session.LoadVerb(_session.CurrentVerb, _entryStates);
+                RefreshUiFromSession();
+            }
 
             if (showFuriganaChanged || startUp)
                 UpdateVisibilityOfFuriganaReading();
@@ -111,7 +105,7 @@ namespace JapaneseVerbConjugation
 
             _entryStates.Clear();
 
-            var enabled = _appOptions.EnabledConjugations;
+            var enabled = _session.Options.EnabledConjugations;
 
             // If nothing enabled, show nothing (or you can add a placeholder label)
             foreach (var form in Enum.GetValues<ConjugationFormEnum>())
@@ -122,17 +116,6 @@ namespace JapaneseVerbConjugation
                 AddConjugationEntry(form);
             }
 
-            // Only build expected answers if we have a current verb
-            // (this will be rebuilt in LoadNextVerb if needed)
-            if (_currentVerb != null)
-            {
-                _expectedAnswers = BuildExpectedAnswersForCurrentVerb();
-            }
-            else
-            {
-                _expectedAnswers = [];
-            }
-            
             conjugationTableLayout.ResumeLayout();
         }
 
@@ -140,7 +123,7 @@ namespace JapaneseVerbConjugation
         {
             dictionaryTableLayout.SuspendLayout();
             conjugationTableLayout.SuspendLayout();
-            furiganaReading.Visible = _appOptions.ShowFurigana;
+            furiganaReading.Visible = _session.Options.ShowFurigana;
             conjugationTableLayout.ResumeLayout();
             dictionaryTableLayout.ResumeLayout();
         }
@@ -192,59 +175,34 @@ namespace JapaneseVerbConjugation
             // if (nextVerb == null) => load a random verb from storage
             ArgumentNullException.ThrowIfNull(nextVerb);
 
-            // Update active verb if it's different from the one we're loading
-            if (_currentVerb?.Id != nextVerb.Id)
-            {
-                // Deactivate all verbs, then activate the one we're loading
-                foreach (var verb in _verbStore.Verbs)
-                {
-                    verb.Active = false;
-                }
-                nextVerb.Active = true;
-                VerbStoreStore.Save(_verbStore);
-            }
+            _session.LoadVerb(nextVerb, _entryStates);
+            RefreshUiFromSession();
+        }
 
-            _currentVerb = nextVerb;
+        private void RefreshUiFromSession()
+        {
+            if (_session.CurrentVerb is null)
+                return;
 
-            // UI label only
-            currentVerb.Text = _currentVerb.DictionaryForm;
-            furiganaReading.Text = _currentVerb.Reading;
+            SetStudyUiEnabled(enabled: true);
 
-            // Build expected answers FIRST (needed for checking saved answers)
-            _expectedAnswers = BuildExpectedAnswersForCurrentVerb();
+            currentVerb.Text = _session.CurrentVerb.DictionaryForm;
+            furiganaReading.Text = _session.CurrentVerb.Reading;
 
-            // Reset entry states
-            foreach (var entry in _entryStates)
-            {
-                entry.UserInput = string.Empty;
-                entry.Result = ConjugationResultEnum.Unchecked;
-            }
-
-            // Restore saved answers from verb store (source of truth)
-            VerbStateRestorer.RestoreSavedAnswers(
-                _currentVerb,
-                _entryStates,
-                _expectedAnswers,
-                _appOptions);
-
-            // Push restored state into controls (this updates the UI text boxes)
-            // IMPORTANT: This must happen AFTER restoring to entry states
             foreach (var c in conjugationTableLayout.Controls)
             {
                 if (c is ConjugationEntryControl control)
                 {
-                    // Refresh the control to show the restored state
                     control.RefreshFromState();
                 }
             }
 
-            // Restore verb group selection if previously answered correctly
-            VerbStateRestorer.RestoreVerbGroup(
-                _currentVerb,
-                _appOptions,
-                SetVerbGroupState);
+            var verbGroupState = _session.GetVerbGroupStateForRestore();
+            SetVerbGroupState(
+                verbGroupState.Selected,
+                verbGroupState.IsCorrect,
+                verbGroupState.LockSelection);
 
-            // Update navigation button states
             UpdateNavigationButtonStates();
         }
 
@@ -253,116 +211,24 @@ namespace JapaneseVerbConjugation
         /// </summary>
         private void UpdateNavigationButtonStates()
         {
-            if (_currentVerb is null || _verbStore.Verbs.Count == 0)
-            {
-                prevVerbButton.Enabled = false;
-                nextVerbButton.Enabled = false;
-                return;
-            }
-
-            int currentIndex = _verbStore.Verbs.FindIndex(v => v.Id == _currentVerb.Id);
-            
-            // Disable Prev if at first verb, disable Next if at last verb
-            prevVerbButton.Enabled = currentIndex > 0;
-            nextVerbButton.Enabled = currentIndex >= 0 && currentIndex < _verbStore.Verbs.Count - 1;
-        }
-
-        private Dictionary<ConjugationFormEnum, IReadOnlyList<string>> BuildExpectedAnswersForCurrentVerb()
-        {
-            if (_currentVerb is null)
-                return [];
-
-            var dict = new Dictionary<ConjugationFormEnum, IReadOnlyList<string>>();
-
-            foreach (var state in _entryStates)
-            {
-                dict[state.ConjugationForm] = ConjugationEngine.Generate(
-                    dictionaryForm: _currentVerb.DictionaryForm,
-                    reading: _currentVerb.Reading,
-                    group: _currentVerb.Group,
-                    form: state.ConjugationForm);
-            }
-
-            return dict;
+            var nav = _session.GetNavigationState();
+            prevVerbButton.Enabled = nav.CanGoPrevious;
+            nextVerbButton.Enabled = nav.CanGoNext;
         }
 
         private void SkipToNextVerb(object sender, EventArgs e)
         {
-            if (_currentVerb is null || _verbStore.Verbs.Count == 0)
-                return;
-
-            // Save all current answers before moving to next verb
-            PersistAllCurrentAnswers();
-
-            // Find current verb index
-            int currentIndex = _verbStore.Verbs.FindIndex(v => v.Id == _currentVerb.Id);
-            if (currentIndex < 0)
-                return;
-
-            // Don't go past the last verb
-            if (currentIndex >= _verbStore.Verbs.Count - 1)
-                return;
-
-            // Deactivate current verb
-            _currentVerb.Active = false;
-
-            // Get next verb
-            int nextIndex = currentIndex + 1;
-            var nextVerb = _verbStore.Verbs[nextIndex];
-
-            // Activate the next verb
-            nextVerb.Active = true;
-            VerbStoreStore.Save(_verbStore);
-
-            LoadNextVerb(nextVerb);
-            
-            // Refresh UI controls to show the new verb's state
-            foreach (var c in conjugationTableLayout.Controls)
+            if (_session.TryMoveToNext(_entryStates, out _))
             {
-                if (c is ConjugationEntryControl control)
-                {
-                    control.RefreshFromState();
-                }
+                RefreshUiFromSession();
             }
         }
 
         private void SkipToPreviousVerb(object sender, EventArgs e)
         {
-            if (_currentVerb is null || _verbStore.Verbs.Count == 0)
-                return;
-
-            // Save all current answers before moving to previous verb
-            PersistAllCurrentAnswers();
-
-            // Find current verb index
-            int currentIndex = _verbStore.Verbs.FindIndex(v => v.Id == _currentVerb.Id);
-            if (currentIndex < 0)
-                return;
-
-            // Don't go before the first verb
-            if (currentIndex <= 0)
-                return;
-
-            // Deactivate current verb
-            _currentVerb.Active = false;
-
-            // Get previous verb
-            int prevIndex = currentIndex - 1;
-            var prevVerb = _verbStore.Verbs[prevIndex];
-
-            // Activate the previous verb
-            prevVerb.Active = true;
-            VerbStoreStore.Save(_verbStore);
-
-            LoadNextVerb(prevVerb);
-            
-            // Refresh UI controls to show the new verb's state
-            foreach (var c in conjugationTableLayout.Controls)
+            if (_session.TryMoveToPrevious(_entryStates, out _))
             {
-                if (c is ConjugationEntryControl control)
-                {
-                    control.RefreshFromState();
-                }
+                RefreshUiFromSession();
             }
         }
 
@@ -398,49 +264,9 @@ namespace JapaneseVerbConjugation
                 return;
 
             var state = entry.ConjugationEntryState;
-
-            var expected = _expectedAnswers.TryGetValue(state.ConjugationForm, out var list)
-                ? list
-                : [];
-
-            state.Result = AnswerChecker.Check(state.UserInput, expected, _appOptions);
-
-            // Save the user's answer to the verb store (source of truth)
-            PersistUserAnswer(state.ConjugationForm, state.UserInput, expected, state.Result);
+            _session.CheckAnswer(state);
 
             entry.RenderResult();
-        }
-
-        private void PersistUserAnswer(
-            ConjugationFormEnum form,
-            string? userInput,
-            IReadOnlyList<string> expected,
-            ConjugationResultEnum result)
-        {
-            if (_currentVerb is null)
-                return;
-
-            AnswerPersistenceService.PersistAnswer(
-                _currentVerb,
-                form,
-                userInput,
-                expected,
-                result,
-                _appOptions,
-                _verbStore);
-        }
-
-        private void PersistAllCurrentAnswers()
-        {
-            if (_currentVerb is null)
-                return;
-
-            AnswerPersistenceService.PersistAllAnswers(
-                _currentVerb,
-                _entryStates,
-                _expectedAnswers,
-                _appOptions,
-                _verbStore);
         }
 
         #endregion
@@ -455,29 +281,10 @@ namespace JapaneseVerbConjugation
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
-
-            var correct = _currentVerb?.Group ?? throw new NullReferenceException("Current verb is not set.");
-
-            // Highlight the selected guess (green if correct, red if incorrect)
-            var selectedRadio = guess switch
-            {
-                VerbGroupEnum.Godan => 五段,
-                VerbGroupEnum.Ichidan => 一段,
-                VerbGroupEnum.Irregular => 不規則,
-                _ => 五段
-            };
-
-            var isCorrect = guess == correct;
+            var result = _session.CheckVerbGroup(guess);
 
             // Use the centralized method to set state
-            SetVerbGroupState(guess, isCorrect, isCorrect);
-
-            // If correct, save the state
-            if (isCorrect && _appOptions.PersistUserAnswers && _currentVerb != null)
-            {
-                _currentVerb.VerbGroupAnsweredCorrectly = true;
-                VerbStoreStore.Save(_verbStore);
-            }
+            SetVerbGroupState(result.Selected, result.IsCorrect, result.IsCorrect);
         }
 
         private void ResetVerbGroup()
@@ -546,9 +353,11 @@ namespace JapaneseVerbConjugation
             if (_verbGroupLocked && sender is RadioButton radio)
             {
                 // Revert the change by restoring the correct selection
-                if (_currentVerb != null && _appOptions.PersistUserAnswers && _currentVerb.VerbGroupAnsweredCorrectly)
+                if (_session.CurrentVerb != null &&
+                    _session.Options.PersistUserAnswers &&
+                    _session.CurrentVerb.VerbGroupAnsweredCorrectly)
                 {
-                    var correctGroup = _currentVerb.Group;
+                    var correctGroup = _session.CurrentVerb.Group;
                     var correctRadio = correctGroup switch
                     {
                         VerbGroupEnum.Godan => 五段,
@@ -587,27 +396,15 @@ namespace JapaneseVerbConjugation
                 return;
 
             var state = entry.ConjugationEntryState;
-
-            var verb = _currentVerb ?? throw new NullReferenceException("Current verb is not set.");
-
-            var expected = ConjugationEngine.Generate(
-                verb.DictionaryForm,
-                verb.Reading,
-                verb.Group,
-                state.ConjugationForm);
-
-            var full = HintAnswerPicker.PickBestForHint(expected);
-
-            if (string.IsNullOrWhiteSpace(full))
+            var hint = _session.GetHint(state.ConjugationForm);
+            if (!hint.HasHint)
                 return;
-
-            var masked = HintMasking.MaskHint(full);
 
             HintPopupForm.Show(
                 owner: this,
                 title: $"{state.ConjugationForm.ToDisplayLabel()}",
-                masked: masked,
-                full: full,
+                masked: hint.Masked,
+                full: hint.Full,
                 baseFont: Font);
         }
 
@@ -617,7 +414,7 @@ namespace JapaneseVerbConjugation
 
         private void ChangeUserOptions(object sender, EventArgs e)
         {
-            using var form = new OptionsForm(_appOptions);
+            using var form = new OptionsForm(_session.Options);
 
             if (form.ShowDialog(this) != DialogResult.OK)
                 return;
@@ -625,7 +422,7 @@ namespace JapaneseVerbConjugation
             var newOptions = form.Result;
 
             // If absolutely nothing changed, do nothing (no save, no flicker)
-            if (AppOptionsStore.AreEqual(_appOptions, newOptions))
+            if (AppOptionsStore.AreEqual(_session.Options, newOptions))
                 return;
 
             // Persist then apply
@@ -635,7 +432,7 @@ namespace JapaneseVerbConjugation
 
         private void ShowImportDialog(object? sender, EventArgs e)
         {
-            var verbStoreEmptyBeforeImport = _verbStore.Verbs.Count == 0;
+            var verbStoreEmptyBeforeImport = _session.Store.Verbs.Count == 0;
 
             var customPath = CustomCsvStore.EnsureExists();
 
@@ -657,7 +454,7 @@ namespace JapaneseVerbConjugation
 
                     log(new ImportLogLine($"Importing: {Path.GetFileName(file)}", ImportLogColour.Neutral));
 
-                    VerbImportService.ImportFromDelimitedFile(file, _verbStore, ev =>
+                    VerbImportService.ImportFromDelimitedFile(file, _session.Store, ev =>
                     {
                         log(ev.Status switch
                         {
@@ -682,7 +479,7 @@ namespace JapaneseVerbConjugation
                         });
                     });
 
-                    VerbStoreStore.Save(_verbStore);
+                    VerbStoreStore.Save(_session.Store);
                 }
             }
 
@@ -690,11 +487,13 @@ namespace JapaneseVerbConjugation
             form.ShowDialog(this);
 
             // Unlock + load active verb only if we were empty before
-            if (verbStoreEmptyBeforeImport && _verbStore.Verbs.Count > 0)
+            if (verbStoreEmptyBeforeImport && _session.Store.Verbs.Count > 0)
             {
                 SetStudyUiEnabled(true);
                 // Find the active verb (should be the first one imported)
-                var activeVerb = _verbStore.Verbs.FirstOrDefault(v => v.Active) ?? _verbStore.Verbs[0];
+                var activeVerb = _session.GetInitialVerb();
+                if (activeVerb is null)
+                    return;
                 LoadNextVerb(activeVerb);
             }
         }

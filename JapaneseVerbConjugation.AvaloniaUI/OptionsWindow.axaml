@@ -1,0 +1,41 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:JapaneseVerbConjugation.AvaloniaUI.ViewModels"
+        mc:Ignorable="d"
+        x:Class="JapaneseVerbConjugation.AvaloniaUI.OptionsWindow"
+        x:CompileBindings="False"
+        Title="Options"
+        Width="520"
+        Height="600">
+    <Grid RowDefinitions="Auto,*,Auto" Margin="12" RowSpacing="6">
+        <StackPanel Grid.Row="0" Spacing="4">
+            <CheckBox Content="Show Furigana" IsChecked="{Binding ShowFurigana}" />
+            <CheckBox Content="Allow Hiragana" IsChecked="{Binding AllowHiragana}" />
+            <CheckBox Content="Focus mode only" IsChecked="{Binding FocusModeOnly}" />
+            <CheckBox Content="Persist user answers" IsChecked="{Binding PersistUserAnswers}" />
+        </StackPanel>
+
+        <Border Grid.Row="1" BorderBrush="#DDDDDD" BorderThickness="1" Padding="6">
+            <StackPanel Spacing="4">
+                <TextBlock Text="Enabled conjugations" FontWeight="Bold" />
+                <ScrollViewer>
+                    <ItemsControl ItemsSource="{Binding Conjugations}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <CheckBox Content="{Binding Label}"
+                                          IsChecked="{Binding IsEnabled, Mode=TwoWay}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </StackPanel>
+        </Border>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+            <Button Content="Save" Width="90" Click="OnSaveClicked" />
+            <Button Content="Cancel" Width="90" Click="OnCancelClicked" />
+        </StackPanel>
+    </Grid>
+</Window>

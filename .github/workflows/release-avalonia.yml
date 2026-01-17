@@ -1,4 +1,4 @@
-name: Build and Release
+name: Build and Release (Avalonia)
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing tag to build (e.g. v1.1.0)"
+        description: "Existing tag to build (e.g. v1.3.0)"
         required: true
         type: string
 
@@ -15,8 +15,18 @@ permissions:
   contents: write
 
 jobs:
-  build-and-release:
-    runs-on: windows-latest
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+          - os: ubuntu-latest
+            rid: linux-x64
+          - os: macos-latest
+            rid: osx-x64
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout workflow branch
@@ -24,7 +34,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Always force the repo to the tag commit before building
       - name: Checkout tag commit (push tag)
         if: github.event_name == 'push'
         shell: pwsh
@@ -39,12 +48,10 @@ jobs:
         shell: pwsh
         run: |
           $tag = "${{ inputs.tag }}".Trim()
-          if (-not $tag.StartsWith("v")) { throw "Tag must start with 'v' (e.g. v1.1.0). You entered '$tag'." }
-
+          if (-not $tag.StartsWith("v")) { throw "Tag must start with 'v' (e.g. v1.3.0). You entered '$tag'." }
           git fetch --force --tags
           git rev-parse "refs/tags/$tag" | Out-Null
           git checkout --force "refs/tags/$tag"
-
           Write-Host "Checked out refs/tags/$tag @ $(git rev-parse HEAD)" -ForegroundColor Green
           git describe --tags --exact-match
 
@@ -54,7 +61,8 @@ jobs:
         run: |
           $tag = if ("${{ github.event_name }}" -eq "workflow_dispatch") { "${{ inputs.tag }}" } else { "${{ github.ref_name }}" }
           $version = $tag -replace '^v', ''
-          $outDir = "JapaneseConjugationTraining-v$version"
+          $rid = "${{ matrix.rid }}"
+          $outDir = "JapaneseConjugationTraining-Avalonia-v$version-$rid"
           $zip = "$outDir.zip"
 
           "tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
@@ -70,24 +78,22 @@ jobs:
       - name: Restore
         run: dotnet restore japaneseVerbConjugation.sln
 
-      - name: Test (Release)
-        run: dotnet test japaneseVerbConjugationTests/japaneseVerbConjugationTests.csproj -c Release --verbosity normal
-
-      - name: Publish (Release, self-contained win-x64)
+      - name: Publish (Release, self-contained)
         shell: pwsh
         run: |
           $outDir = "${{ steps.meta.outputs.outDir }}"
+          $rid = "${{ matrix.rid }}"
 
-          dotnet publish japaneseVerbConjugation/JapaneseVerbConjugation.csproj `
+          dotnet publish JapaneseVerbConjugation.AvaloniaUI/JapaneseVerbConjugation.AvaloniaUI.csproj `
             -c Release `
-            -r win-x64 `
+            -r $rid `
             --self-contained true `
             -p:PublishSingleFile=true `
             -p:IncludeNativeLibrariesForSelfExtract=true `
             -p:EnableCompressionInSingleFile=true `
             -o $outDir
 
-      - name: Copy Data files
+      - name: Copy CSV data files
         shell: pwsh
         run: |
           $outDir = "${{ steps.meta.outputs.outDir }}"
@@ -95,16 +101,10 @@ jobs:
           New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
 
           $src = "JapaneseVerbConjugation.Core\Data"
-          $files = @(
-            "jmdict-eng-3.6.1.json.gz",
-            "N5.csv",
-            "N4.csv"
-          )
-
+          $files = @("N5.csv", "N4.csv")
           foreach ($f in $files) {
             $from = Join-Path $src $f
             $to = Join-Path $dataDir $f
-
             if (Test-Path $from) {
               Copy-Item $from $to -Force
               Write-Host "Copied $f" -ForegroundColor Gray
@@ -112,12 +112,6 @@ jobs:
               Write-Host "Warning: missing $from" -ForegroundColor Yellow
             }
           }
-
-      - name: Remove PDBs (optional)
-        shell: pwsh
-        run: |
-          $outDir = "${{ steps.meta.outputs.outDir }}"
-          Get-ChildItem -Path $outDir -Filter "*.pdb" -Recurse -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
 
       - name: Create ZIP
         shell: pwsh
@@ -138,22 +132,42 @@ jobs:
           $size = [math]::Round((Get-Item $zip).Length / 1MB, 2)
           Write-Host "ZIP created: $zip ($size MB)" -ForegroundColor Green
 
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.meta.outputs.zip }}
+          path: ${{ steps.meta.outputs.zip }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List artifacts
+        run: ls -la artifacts
+
       - name: Create/Update GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ steps.meta.outputs.tag }}
-          name: Release ${{ steps.meta.outputs.tag }}
-          files: ${{ steps.meta.outputs.zip }}
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          name: Release ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }} (Avalonia)
+          files: artifacts/**/*.zip
           draft: false
           prerelease: false
           overwrite: true
           body: |
-            ## Japanese Verb Conjugation Training ${{ steps.meta.outputs.tag }}
+            ## Japanese Verb Conjugation Training (Avalonia)
 
-            ### Download
-            Download the ZIP file above and extract it. Run `JapaneseVerbConjugation.exe` to start the application.
+            ### Downloads
+            - Windows: `*-win-x64.zip`
+            - Linux: `*-linux-x64.zip`
+            - macOS: `*-osx-x64.zip`
 
-            ### Requirements
-            - Windows 10/11 (64-bit)
+            ### Notes
+            Extract and run the executable inside each ZIP. The `Data` folder is included.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,5 +1,7 @@
 ﻿using JapaneseVerbConjugation.Enums;
 using JapaneseVerbConjugation.Interfaces;
+using JapaneseVerbConjugation.SharedResources.Constants;
+using JapaneseVerbConjugation.SharedResources.Logic;
 using JapaneseVerbConjugation.SharedResources.Methods;
 using System;
 using System.Collections.Generic;
@@ -13,14 +15,9 @@ namespace JapaneseVerbConjugation.SharedResources.DictionaryMethods
 {
     public static class DictionaryLoader
     {
-        private const string DataFolderName = "Data";
-        private const string DictionaryFileName = "jmdict-eng-3.6.1.json.gz";
-
         public static IJapaneseDictionary LoadOrThrow()
         {
-            var baseDir = AppContext.BaseDirectory;
-            var dataDir = Path.Combine(baseDir, DataFolderName);
-            var path = Path.Combine(dataDir, DictionaryFileName);
+            var path = DataPathProvider.ResolveDataFile(DataFileConstants.DictionaryFileName);
             return LoadOrThrowFromPath(path);
         }
 

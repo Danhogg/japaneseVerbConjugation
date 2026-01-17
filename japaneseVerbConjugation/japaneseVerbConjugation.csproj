@@ -6,24 +6,24 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>1.2.0</Version>
-    <AssemblyVersion>1.2.0.0</AssemblyVersion>
-    <FileVersion>1.2.0.0</FileVersion>
+    <Version>1.3.0</Version>
+    <AssemblyVersion>1.3.0.0</AssemblyVersion>
+    <FileVersion>1.3.0.0</FileVersion>
+    <AssemblyName>JapaneseVerbConjugation</AssemblyName>
+    <RootNamespace>JapaneseVerbConjugation</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
-	<Content Include="Data\*.csv">
-		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	</Content>
+    <ProjectReference Include="..\JapaneseVerbConjugation.Core\JapaneseVerbConjugation.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="Data\jmdict-eng-3.6.1+20260105122906.json.zip" />
-    <None Remove="Data\jmdict-eng-3.6.1.json.gz" />
+    <None Remove="..\JapaneseVerbConjugation.Core\Data\jmdict-eng-3.6.1+20260105122906.json.zip" />
+    <None Remove="..\JapaneseVerbConjugation.Core\Data\jmdict-eng-3.6.1.json.gz" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="Data\jmdict-eng-3.6.1.json.gz">
+    <Content Include="..\JapaneseVerbConjugation.Core\Data\jmdict-eng-3.6.1.json.gz">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

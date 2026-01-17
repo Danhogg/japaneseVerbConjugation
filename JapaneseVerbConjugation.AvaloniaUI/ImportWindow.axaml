@@ -1,0 +1,46 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:JapaneseVerbConjugation.AvaloniaUI.ViewModels"
+        mc:Ignorable="d"
+        x:Class="JapaneseVerbConjugation.AvaloniaUI.ImportWindow"
+        x:CompileBindings="False"
+        Title="Import verbs"
+        Width="640"
+        Height="560">
+    <Grid RowDefinitions="Auto,*,Auto" Margin="12" RowSpacing="6">
+        <Border Grid.Row="0" BorderBrush="#DDDDDD" BorderThickness="1" Padding="6">
+            <StackPanel Spacing="4">
+                <TextBlock Text="What do you want to import?" FontWeight="Bold" />
+                <CheckBox Content="Import N5 starter pack" IsChecked="{Binding ImportN5}" />
+                <CheckBox Content="Import N4 starter pack" IsChecked="{Binding ImportN4}" />
+                <CheckBox Content="Import Custom pack (custom.csv)" IsChecked="{Binding ImportCustom}" />
+
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="16,2,0,0">
+                    <Button Content="Open custom.csv" Click="OnOpenCustomClicked" />
+                    <Button Content="Open data folder" Click="OnOpenFolderClicked" />
+                </StackPanel>
+
+                <TextBlock Text="{Binding CustomCsvPath}" FontSize="12" Opacity="0.7" />
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="1" BorderBrush="#DDDDDD" BorderThickness="1" Padding="6">
+            <ScrollViewer>
+                <ItemsControl ItemsSource="{Binding LogLines}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Message}" Foreground="{Binding Colour}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+            <Button Content="Import" Width="90" Click="OnImportClicked" IsEnabled="{Binding IsImportEnabled}" />
+            <Button Content="Close" Width="90" Click="OnCloseClicked" />
+        </StackPanel>
+    </Grid>
+</Window>

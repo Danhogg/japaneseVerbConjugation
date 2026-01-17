@@ -24,7 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\japaneseVerbConjugation\JapaneseVerbConjugation.csproj" />
+    <ProjectReference Include="..\JapaneseVerbConjugation.Core\JapaneseVerbConjugation.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
