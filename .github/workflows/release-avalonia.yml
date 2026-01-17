@@ -22,8 +22,6 @@ jobs:
         include:
           - os: windows-latest
             rid: win-x64
-          - os: ubuntu-latest
-            rid: linux-x64
           - os: macos-latest
             rid: osx-x64
     runs-on: ${{ matrix.os }}
@@ -76,7 +74,7 @@ jobs:
           dotnet-version: "8.0.x"
 
       - name: Restore
-        run: dotnet restore japaneseVerbConjugation.sln
+        run: dotnet restore JapaneseVerbConjugation.AvaloniaUI/JapaneseVerbConjugation.AvaloniaUI.csproj
 
       - name: Publish (Release, self-contained)
         shell: pwsh
