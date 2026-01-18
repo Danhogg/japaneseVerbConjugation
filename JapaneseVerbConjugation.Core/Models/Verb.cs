@@ -1,6 +1,7 @@
 ﻿using JapaneseVerbConjugation.Enums;
+using JapaneseVerbConjugation.Models;
 
-namespace JapaneseVerbConjugation.Models
+namespace JapaneseVerbConjugation.Core.Models
 {
     public sealed class Verb
     {

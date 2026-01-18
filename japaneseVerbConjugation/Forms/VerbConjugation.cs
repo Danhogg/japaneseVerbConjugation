@@ -1,4 +1,6 @@
 ﻿using JapaneseVerbConjugation.Controls;
+using JapaneseVerbConjugation.Core.Models;
+using JapaneseVerbConjugation.Core.SharedResources.Logic;
 using JapaneseVerbConjugation.Enums;
 using JapaneseVerbConjugation.Forms;
 using JapaneseVerbConjugation.Models;

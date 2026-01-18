@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using JapaneseVerbConjugation.AvaloniaUI.ViewModels;
 using JapaneseVerbConjugation.SharedResources.Logic;
+using System;
 
 namespace JapaneseVerbConjugation.AvaloniaUI;
 

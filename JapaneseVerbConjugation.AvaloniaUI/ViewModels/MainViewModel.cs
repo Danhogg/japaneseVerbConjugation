@@ -8,10 +8,11 @@ using JapaneseVerbConjugation.AvaloniaUI.Constants;
 using Avalonia.Threading;
 using JapaneseVerbConjugation.AvaloniaUI.Infrastructure;
 using JapaneseVerbConjugation.Enums;
-using JapaneseVerbConjugation.Models;
 using JapaneseVerbConjugation.Models.ModelsForSerialising;
 using JapaneseVerbConjugation.SharedResources.Constants;
 using JapaneseVerbConjugation.SharedResources.Logic;
+using JapaneseVerbConjugation.Core.Models;
+using JapaneseVerbConjugation.Core.SharedResources.Logic;
 
 namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
 {
@@ -43,7 +44,7 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
             _owner = owner;
             _session = VerbStudySession.LoadFromStorage();
 
-            Entries = new ObservableCollection<ConjugationEntryViewModel>();
+            Entries = [];
 
             CheckEntryCommand = new RelayCommand(CheckEntry);
             HintEntryCommand = new RelayCommand(ShowHint);

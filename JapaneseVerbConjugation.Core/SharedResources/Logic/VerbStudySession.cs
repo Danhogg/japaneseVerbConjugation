@@ -1,10 +1,11 @@
-using System;
+using JapaneseVerbConjugation.Core.Models;
 using JapaneseVerbConjugation.Enums;
 using JapaneseVerbConjugation.Models;
 using JapaneseVerbConjugation.Models.ModelsForSerialising;
+using JapaneseVerbConjugation.SharedResources.Logic;
 using JapaneseVerbConjugation.SharedResources.Methods;
 
-namespace JapaneseVerbConjugation.SharedResources.Logic
+namespace JapaneseVerbConjugation.Core.SharedResources.Logic
 {
     public sealed class VerbStudySession
     {

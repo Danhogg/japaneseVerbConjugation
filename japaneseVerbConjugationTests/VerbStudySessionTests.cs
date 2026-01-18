@@ -1,9 +1,10 @@
 using System.Reflection;
 using System.Text.Json;
+using JapaneseVerbConjugation.Core.Models;
+using JapaneseVerbConjugation.Core.SharedResources.Logic;
 using JapaneseVerbConjugation.Enums;
 using JapaneseVerbConjugation.Models;
 using JapaneseVerbConjugation.Models.ModelsForSerialising;
-using JapaneseVerbConjugation.SharedResources.Logic;
 
 namespace japaneseVerbConjugationTests;
 

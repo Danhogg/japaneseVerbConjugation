@@ -1,3 +1,4 @@
+using JapaneseVerbConjugation.Core.Models;
 using JapaneseVerbConjugation.Enums;
 using JapaneseVerbConjugation.Models;
 using JapaneseVerbConjugation.Models.ModelsForSerialising;

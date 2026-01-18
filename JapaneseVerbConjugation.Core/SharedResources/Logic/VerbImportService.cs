@@ -1,6 +1,6 @@
-﻿using JapaneseVerbConjugation.Enums;
+﻿using JapaneseVerbConjugation.Core.Models;
+using JapaneseVerbConjugation.Enums;
 using JapaneseVerbConjugation.Interfaces;
-using JapaneseVerbConjugation.Models;
 using JapaneseVerbConjugation.Models.ModelsForSerialising;
 using JapaneseVerbConjugation.SharedResources.DictionaryMethods;
 using JapaneseVerbConjugation.SharedResources.Methods;

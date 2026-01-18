@@ -1,4 +1,4 @@
-using JapaneseVerbConjugation.Models;
+using JapaneseVerbConjugation.Core.Models;
 using JapaneseVerbConjugation.Models.ModelsForSerialising;
 using JapaneseVerbConjugation.SharedResources.Logic;
 

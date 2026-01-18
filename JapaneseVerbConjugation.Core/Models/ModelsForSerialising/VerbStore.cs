@@ -1,4 +1,6 @@
-﻿namespace JapaneseVerbConjugation.Models.ModelsForSerialising
+﻿using JapaneseVerbConjugation.Core.Models;
+
+namespace JapaneseVerbConjugation.Models.ModelsForSerialising
 {
     public sealed class VerbStore
     {
