@@ -382,7 +382,7 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
             UpdateNotesLastEditedText(lastEdited);
             ResetNotesSavedState();
 
-            _suppressNotesSave = false;
+            Dispatcher.UIThread.Post(() => _suppressNotesSave = false);
         }
 
         private void UpdateNotesLastEditedText(DateTime? lastEditedUtc)

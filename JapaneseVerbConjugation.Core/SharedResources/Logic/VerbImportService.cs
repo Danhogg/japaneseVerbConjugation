@@ -6,12 +6,10 @@ using JapaneseVerbConjugation.SharedResources.DictionaryMethods;
 using JapaneseVerbConjugation.SharedResources.Methods;
 using System.Diagnostics;
 
-namespace JapaneseVerbConjugation.SharedResources.Logic
+namespace JapaneseVerbConjugation.Core.SharedResources.Logic
 {
     public static class VerbImportService
     {
-        private static readonly IJapaneseDictionary dictionary = JapaneseDictionaryProvider.Instance;
-
         public sealed class ImportResult
         {
             public int TotalRows { get; init; }
