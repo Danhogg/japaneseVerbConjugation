@@ -163,8 +163,7 @@
                 <Button Grid.Column="0"
                         Content="Options"
                         Width="90"
-                        Command="{Binding OptionsCommand}"
-                        IsEnabled="{Binding IsVerbLoaded}" />
+                        Command="{Binding OptionsCommand}" />
                 <Button Grid.Column="1"
                         Content="Import"
                         Width="90"

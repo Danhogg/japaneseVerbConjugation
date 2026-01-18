@@ -1,4 +1,5 @@
 ﻿using JapaneseVerbConjugation.Models.ModelsForSerialising;
+using System.Diagnostics;
 using System.Text.Json;
 
 namespace JapaneseVerbConjugation.SharedResources.Logic
@@ -58,7 +59,14 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
             Directory.CreateDirectory(dir);
 
             var backupPath = Path.Combine(dir, "verbs.backup.json");
-            File.Copy(path, backupPath, overwrite: true);
+            try
+            {
+                File.Copy(path, backupPath, overwrite: true);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[BACKUP] Failed to create backup at '{backupPath}': {ex.Message}");
+            }
         }
 
         private static string GetPath()

@@ -16,6 +16,11 @@ public partial class MainWindow : Window
     private void OnClosing(object? sender, WindowClosingEventArgs e)
     {
         VerbStoreStore.CreateBackup();
+
+        if (DataContext is IDisposable disposable)
+        {
+            disposable.Dispose();
+        }
     }
 
     private void OnNotesTextChanged(object? sender, TextChangedEventArgs e)

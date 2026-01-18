@@ -15,7 +15,7 @@ using JapaneseVerbConjugation.SharedResources.Logic;
 
 namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
 {
-    public sealed class MainViewModel : ViewModelBase
+    public sealed class MainViewModel : ViewModelBase, IDisposable
     {
         private readonly Window _owner;
         private readonly VerbStudySession _session;
@@ -36,6 +36,7 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
         private bool _hasUnsavedChanges;
         private bool _suppressNotesSave;
         private DispatcherTimer? _favoriteSaveTimer;
+        private Guid? _favoriteSaveVerbId;
 
         public MainViewModel(Window owner)
         {
@@ -365,6 +366,7 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
         private void LoadVerbDetails(Verb? verb)
         {
             _suppressNotesSave = true;
+            CancelFavoriteSave();
 
             IsFavorite = verb?.IsFavorite ?? false;
             NotesText = verb?.UserNotes?.Text ?? string.Empty;
@@ -445,6 +447,7 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
             if (_session.CurrentVerb is null)
                 return;
 
+            _favoriteSaveVerbId = _session.CurrentVerb.Id;
             _favoriteSaveTimer ??= new DispatcherTimer
             {
                 Interval = TimeSpan.FromMilliseconds(400)
@@ -458,9 +461,29 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
 
         private void OnFavoriteSaveTick(object? sender, EventArgs e)
         {
-            _favoriteSaveTimer?.Stop();
-            _favoriteSaveTimer!.Tick -= OnFavoriteSaveTick;
+            if (_favoriteSaveTimer is null)
+                return;
+
+            _favoriteSaveTimer.Stop();
+            _favoriteSaveTimer.Tick -= OnFavoriteSaveTick;
+            if (_session.CurrentVerb is null || _favoriteSaveVerbId != _session.CurrentVerb.Id)
+                return;
+
             _session.SetFavorite(IsFavorite);
+        }
+
+        private void CancelFavoriteSave()
+        {
+            _favoriteSaveVerbId = null;
+            _favoriteSaveTimer?.Stop();
+            if (_favoriteSaveTimer is not null)
+                _favoriteSaveTimer.Tick -= OnFavoriteSaveTick;
+        }
+
+        public void Dispose()
+        {
+            CancelFavoriteSave();
+            _favoriteSaveTimer = null;
         }
 
         private Avalonia.Media.IBrush GetVerbGroupForeground(VerbGroupEnum group)
