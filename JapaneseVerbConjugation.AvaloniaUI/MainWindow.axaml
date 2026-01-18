@@ -44,8 +44,9 @@
     </Window.Styles>
     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Margin="10">
         <Grid Grid.Column="0" RowDefinitions="Auto,*,Auto" RowSpacing="6">
-            <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
-                <StackPanel Grid.Column="0" Spacing="6">
+            <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto">
+                <Border Grid.Column="0" Width="90" />
+                <StackPanel Grid.Column="1" Spacing="6">
                     <TextBlock Text="{Binding CurrentVerb}"
                                FontSize="36"
                                FontWeight="Bold"
@@ -56,7 +57,8 @@
                                HorizontalAlignment="Center"
                                IsVisible="{Binding ShowFurigana}" />
 
-                    <Border BorderBrush="#DDDDDD" BorderThickness="1" Padding="6" HorizontalAlignment="Center">
+                    <Border BorderBrush="#DDDDDD" BorderThickness="1" Padding="6" HorizontalAlignment="Center"
+                            IsEnabled="{Binding IsVerbLoaded}">
                         <StackPanel Spacing="4">
                             <TextBlock Text="Verb Group"
                                        FontWeight="Bold"
@@ -89,15 +91,15 @@
                             IsEnabled="{Binding IsCheckVerbGroupEnabled}" />
                 </StackPanel>
 
-                <Button Grid.Column="1"
-                        Content="Show >"
+                <Button Grid.Column="2"
+                        Content="{Binding DetailsToggleLabel}"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Top"
                         Command="{Binding ToggleDetailsCommand}"
-                        IsVisible="{Binding IsDetailsHidden}" />
+                        IsEnabled="{Binding IsVerbLoaded}" />
             </Grid>
 
-            <ScrollViewer Grid.Row="1">
+            <ScrollViewer Grid.Row="1" IsEnabled="{Binding IsVerbLoaded}">
                 <ItemsControl x:Name="EntriesHost" ItemsSource="{Binding Entries}" Margin="0" HorizontalAlignment="Stretch">
                     <ItemsControl.Resources>
                         <infra:ColumnWidthConverter x:Key="ColumnWidthConverter" MinItemWidth="380" MaxColumns="2" />
@@ -161,7 +163,8 @@
                 <Button Grid.Column="0"
                         Content="Options"
                         Width="90"
-                        Command="{Binding OptionsCommand}" />
+                        Command="{Binding OptionsCommand}"
+                        IsEnabled="{Binding IsVerbLoaded}" />
                 <Button Grid.Column="1"
                         Content="Import"
                         Width="90"
@@ -200,15 +203,13 @@
             <Grid RowDefinitions="Auto,Auto,Auto,*,Auto"
                   RowSpacing="10"
                   IsVisible="{Binding IsDetailsVisible}"
-                  IsHitTestVisible="{Binding IsDetailsVisible}">
+                  IsHitTestVisible="{Binding IsDetailsVisible}"
+                  IsEnabled="{Binding IsVerbLoaded}">
                 <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
                     <TextBlock Text="Verb Details"
                                FontSize="16"
                                FontWeight="Bold"
                                VerticalAlignment="Center" />
-                    <Button Grid.Column="1"
-                            Content="Hide >"
-                            Command="{Binding ToggleDetailsCommand}" />
                 </Grid>
 
                 <Border Grid.Row="1" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="0,0,0,8">
@@ -216,7 +217,8 @@
                         <ToggleButton Classes="favStar"
                                       IsChecked="{Binding IsFavorite}"
                                       Content="★"
-                                      Focusable="False" />
+                                      Focusable="False"
+                                      IsEnabled="{Binding IsVerbLoaded}" />
                         <TextBlock Text="Favorite" FontSize="14" VerticalAlignment="Center" />
                     </StackPanel>
                 </Border>

@@ -13,13 +13,13 @@ public sealed class VerbStudySessionTests
     [Test]
     public void SetFavorite_UpdatesVerbAndPersists()
     {
-        WithStoreBackup(() =>
+        using var scope = new TestStoreScope();
         {
             var session = CreateSessionWithVerb(out var verb);
 
             var result = session.SetFavorite(true);
 
-            var persisted = LoadPersistedStore();
+            var persisted = LoadPersistedStore(scope.StorePath);
             var savedVerb = persisted.Verbs.Single(v => v.Id == verb.Id);
 
             using (Assert.EnterMultipleScope())
@@ -28,20 +28,20 @@ public sealed class VerbStudySessionTests
                 Assert.That(verb.IsFavorite, Is.True);
                 Assert.That(savedVerb.IsFavorite, Is.True);
             }
-        });
+        }
     }
 
     [Test]
     public void SetNotes_WhitespaceClearsExistingAndPersists()
     {
-        WithStoreBackup(() =>
+        using var scope = new TestStoreScope();
         {
             var session = CreateSessionWithVerb(out var verb);
             session.SetNotes("Existing note");
 
             var result = session.SetNotes("   ");
 
-            var persisted = LoadPersistedStore();
+            var persisted = LoadPersistedStore(scope.StorePath);
             var savedVerb = persisted.Verbs.Single(v => v.Id == verb.Id);
 
             using (Assert.EnterMultipleScope())
@@ -50,19 +50,19 @@ public sealed class VerbStudySessionTests
                 Assert.That(verb.UserNotes, Is.Null);
                 Assert.That(savedVerb.UserNotes, Is.Null);
             }
-        });
+        }
     }
 
     [Test]
     public void SetNotes_NewText_SavesTrimmedAndReturnsTimestamp()
     {
-        WithStoreBackup(() =>
+        using var scope = new TestStoreScope();
         {
             var session = CreateSessionWithVerb(out var verb);
 
             var result = session.SetNotes("  New note  ");
 
-            var persisted = LoadPersistedStore();
+            var persisted = LoadPersistedStore(scope.StorePath);
             var savedVerb = persisted.Verbs.Single(v => v.Id == verb.Id);
 
             using (Assert.EnterMultipleScope())
@@ -71,7 +71,7 @@ public sealed class VerbStudySessionTests
                 Assert.That(verb.UserNotes?.Text, Is.EqualTo("New note"));
                 Assert.That(savedVerb.UserNotes?.Text, Is.EqualTo("New note"));
             }
-        });
+        }
     }
 
     private static VerbStudySession CreateSessionWithVerb(out Verb verb)
@@ -107,41 +107,9 @@ public sealed class VerbStudySessionTests
         return (VerbStudySession)ctor!.Invoke([options, store]);
     }
 
-    private static void WithStoreBackup(Action action)
+    private static VerbStore LoadPersistedStore(string path)
     {
-        var path = GetStorePath();
-        var existed = File.Exists(path);
-        var backup = existed ? File.ReadAllText(path) : null;
-
-        try
-        {
-            action();
-        }
-        finally
-        {
-            if (existed)
-            {
-                File.WriteAllText(path, backup!);
-            }
-            else if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
-        }
-    }
-
-    private static VerbStore LoadPersistedStore()
-    {
-        var path = GetStorePath();
         var json = File.ReadAllText(path);
         return JsonSerializer.Deserialize<VerbStore>(json)!;
-    }
-
-    private static string GetStorePath()
-    {
-        var dir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "JapaneseVerbConjugation");
-        return Path.Combine(dir, "verbs.json");
     }
 }

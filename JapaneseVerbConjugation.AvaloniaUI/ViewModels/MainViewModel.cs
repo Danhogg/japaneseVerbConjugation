@@ -109,16 +109,18 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
             }
         }
 
+
         public bool IsClearEnabled => _session.CurrentVerb != null;
         public bool IsNotesEnabled => _session.CurrentVerb != null;
+        public bool IsVerbLoaded => _session.CurrentVerb != null;
         public bool IsNotesSavedVisible => _session.CurrentVerb != null && _isNotesSavedVisible;
         public bool CanSaveNotes
             => _session.CurrentVerb != null
                && _hasUnsavedChanges
                && NoteSavePolicy.Evaluate(_session.CurrentVerb.UserNotes?.Text, NotesText).Action != NoteSaveAction.None;
 
-        public bool IsCheckVerbGroupEnabled => !_verbGroupLocked;
-        public bool IsVerbGroupHitTestEnabled => !_verbGroupLocked;
+        public bool IsCheckVerbGroupEnabled => IsVerbLoaded && !_verbGroupLocked;
+        public bool IsVerbGroupHitTestEnabled => IsVerbLoaded && !_verbGroupLocked;
 
         public bool IsGodanSelected => _selectedVerbGroup == VerbGroupEnum.Godan;
         public bool IsIchidanSelected => _selectedVerbGroup == VerbGroupEnum.Ichidan;
@@ -156,7 +158,7 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
 
         public bool IsDetailsHidden => !_isDetailsVisible;
 
-        public string DetailsToggleLabel => IsDetailsVisible ? "Hide >" : "Show >";
+        public string DetailsToggleLabel => IsDetailsVisible ? "Hide >" : "Show <";
 
         public double DetailsWidth => IsDetailsVisible ? 280 : 0;
 
@@ -224,6 +226,7 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
             OnPropertyChanged(nameof(ShowFurigana));
             OnPropertyChanged(nameof(IsClearEnabled));
             OnPropertyChanged(nameof(IsNotesEnabled));
+            OnPropertyChanged(nameof(IsVerbLoaded));
             OnPropertyChanged(nameof(IsNotesSavedVisible));
             OnPropertyChanged(nameof(CanSaveNotes));
         }
@@ -241,6 +244,7 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
 
             OnPropertyChanged(nameof(IsClearEnabled));
             OnPropertyChanged(nameof(IsNotesEnabled));
+            OnPropertyChanged(nameof(IsVerbLoaded));
             OnPropertyChanged(nameof(IsNotesSavedVisible));
             OnPropertyChanged(nameof(CanSaveNotes));
         }
@@ -499,18 +503,16 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
                 WindowStartupLocation = WindowStartupLocation.CenterOwner
             };
 
-            var result = await window.ShowDialog<bool?>(_owner);
-            if (result == true)
+            await window.ShowDialog<bool?>(_owner);
+
+            var initial = _session.GetInitialVerb();
+            if (initial != null)
             {
-                var initial = _session.GetInitialVerb();
-                if (initial != null)
-                {
-                    LoadVerb(initial);
-                }
-                else
-                {
-                    SetStudyUiEnabled(false);
-                }
+                LoadVerb(initial);
+            }
+            else
+            {
+                SetStudyUiEnabled(false);
             }
         }
 

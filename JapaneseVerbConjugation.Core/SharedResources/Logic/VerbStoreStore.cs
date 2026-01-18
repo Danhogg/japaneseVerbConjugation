@@ -6,6 +6,18 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
     public static class VerbStoreStore
     {
         private const string FileName = "verbs.json";
+        private static string? _overridePath;
+
+        public static void SetOverridePath(string? filePath)
+        {
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                _overridePath = null;
+                return;
+            }
+
+            _overridePath = Path.GetFullPath(filePath);
+        }
 
         public static VerbStore LoadOrCreateDefault()
         {
@@ -36,8 +48,24 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
             File.WriteAllText(path, json);
         }
 
+        public static void CreateBackup()
+        {
+            var path = GetPath();
+            if (!File.Exists(path))
+                return;
+
+            var dir = Path.GetDirectoryName(path)!;
+            Directory.CreateDirectory(dir);
+
+            var backupPath = Path.Combine(dir, "verbs.backup.json");
+            File.Copy(path, backupPath, overwrite: true);
+        }
+
         private static string GetPath()
         {
+            if (!string.IsNullOrWhiteSpace(_overridePath))
+                return _overridePath;
+
             var dir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                 "JapaneseVerbConjugation");

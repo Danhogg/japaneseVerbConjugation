@@ -10,6 +10,7 @@ public sealed class AnswerPersistenceServiceTests
     [Test]
     public void PersistAnswer_Correct_SavesCanonical()
     {
+        using var _ = new TestStoreScope();
         var verb = CreateVerb();
         var store = new VerbStore { Verbs = [verb] };
         var expected = new List<string> { "書く" };
@@ -33,6 +34,7 @@ public sealed class AnswerPersistenceServiceTests
     [Test]
     public void PersistAnswer_Incorrect_SavesUserInput()
     {
+        using var _ = new TestStoreScope();
         var verb = CreateVerb();
         var store = new VerbStore { Verbs = [verb] };
 
@@ -55,6 +57,7 @@ public sealed class AnswerPersistenceServiceTests
     [Test]
     public void PersistAnswer_Whitespace_DoesNotSave()
     {
+        using var _ = new TestStoreScope();
         var verb = CreateVerb();
         var store = new VerbStore { Verbs = [verb] };
 
