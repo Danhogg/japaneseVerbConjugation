@@ -6,6 +6,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Avalonia.Media;
 using Avalonia.Threading;
+using JapaneseVerbConjugation.Core.SharedResources.Logic;
 using JapaneseVerbConjugation.SharedResources.Constants;
 using JapaneseVerbConjugation.SharedResources.Logic;
 

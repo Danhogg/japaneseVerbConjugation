@@ -8,14 +8,15 @@ using JapaneseVerbConjugation.AvaloniaUI.Constants;
 using Avalonia.Threading;
 using JapaneseVerbConjugation.AvaloniaUI.Infrastructure;
 using JapaneseVerbConjugation.Enums;
-using JapaneseVerbConjugation.Models;
 using JapaneseVerbConjugation.Models.ModelsForSerialising;
 using JapaneseVerbConjugation.SharedResources.Constants;
 using JapaneseVerbConjugation.SharedResources.Logic;
+using JapaneseVerbConjugation.Core.Models;
+using JapaneseVerbConjugation.Core.SharedResources.Logic;
 
 namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
 {
-    public sealed class MainViewModel : ViewModelBase
+    public sealed class MainViewModel : ViewModelBase, IDisposable
     {
         private readonly Window _owner;
         private readonly VerbStudySession _session;
@@ -28,13 +29,22 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
         private bool _verbGroupLocked;
         private VerbGroupEnum? _selectedVerbGroup;
         private bool? _verbGroupIsCorrect;
+        private bool _isDetailsVisible;
+        private bool _isFavorite;
+        private string _notesText = string.Empty;
+        private string _notesLastEditedText = "Last edited: -";
+        private bool _isNotesSavedVisible;
+        private bool _hasUnsavedChanges;
+        private bool _suppressNotesSave;
+        private DispatcherTimer? _favoriteSaveTimer;
+        private Guid? _favoriteSaveVerbId;
 
         public MainViewModel(Window owner)
         {
             _owner = owner;
             _session = VerbStudySession.LoadFromStorage();
 
-            Entries = new ObservableCollection<ConjugationEntryViewModel>();
+            Entries = [];
 
             CheckEntryCommand = new RelayCommand(CheckEntry);
             HintEntryCommand = new RelayCommand(ShowHint);
@@ -45,6 +55,8 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
             OptionsCommand = new RelayCommand(async _ => await ShowOptionsAsync());
             ImportCommand = new RelayCommand(async _ => await ShowImportAsync());
             ClearCommand = new RelayCommand(_ => _ = ClearAsync(), _ => IsClearEnabled);
+            ToggleDetailsCommand = new RelayCommand(_ => ToggleDetails());
+            SaveNotesCommand = new RelayCommand(_ => SaveNotes(), _ => CanSaveNotes);
 
             WindowTitle = VersionInfo.GetApplicationTitle();
 
@@ -100,9 +112,23 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
         }
 
         public bool IsClearEnabled => _session.CurrentVerb != null;
+        public bool IsNotesEnabled => _session.CurrentVerb != null;
+        public bool IsVerbLoaded => _session.CurrentVerb != null;
+        public bool IsNotesSavedVisible => _session.CurrentVerb != null && _isNotesSavedVisible;
+        public bool CanSaveNotes
+        {
+            get
+            {
+                var currentVerb = _session.CurrentVerb;
+                if (currentVerb is null || !_hasUnsavedChanges)
+                    return false;
 
-        public bool IsCheckVerbGroupEnabled => !_verbGroupLocked;
-        public bool IsVerbGroupHitTestEnabled => !_verbGroupLocked;
+                return NoteSavePolicy.Evaluate(currentVerb.UserNotes?.Text, NotesText).Action != NoteSaveAction.None;
+            }
+        }
+
+        public bool IsCheckVerbGroupEnabled => IsVerbLoaded && !_verbGroupLocked;
+        public bool IsVerbGroupHitTestEnabled => IsVerbLoaded && !_verbGroupLocked;
 
         public bool IsGodanSelected => _selectedVerbGroup == VerbGroupEnum.Godan;
         public bool IsIchidanSelected => _selectedVerbGroup == VerbGroupEnum.Ichidan;
@@ -121,6 +147,58 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
         public ICommand OptionsCommand { get; }
         public ICommand ImportCommand { get; }
         public ICommand ClearCommand { get; }
+        public ICommand ToggleDetailsCommand { get; }
+        public ICommand SaveNotesCommand { get; }
+
+        public bool IsDetailsVisible
+        {
+            get => _isDetailsVisible;
+            set
+            {
+                if (SetProperty(ref _isDetailsVisible, value))
+                {
+                    OnPropertyChanged(nameof(IsDetailsHidden));
+                    OnPropertyChanged(nameof(DetailsToggleLabel));
+                    OnPropertyChanged(nameof(DetailsWidth));
+                }
+            }
+        }
+
+        public bool IsDetailsHidden => !_isDetailsVisible;
+
+        public string DetailsToggleLabel => IsDetailsVisible ? "Hide >" : "Show <";
+
+        public double DetailsWidth => IsDetailsVisible ? 280 : 0;
+
+        public bool IsFavorite
+        {
+            get => _isFavorite;
+            set
+            {
+                if (SetProperty(ref _isFavorite, value) && !_suppressNotesSave)
+                {
+                    ScheduleFavoriteSave();
+                }
+            }
+        }
+
+        public string NotesText
+        {
+            get => _notesText;
+            set
+            {
+                if (SetProperty(ref _notesText, value) && !_suppressNotesSave)
+                {
+                    MarkUnsavedChanges();
+                }
+            }
+        }
+
+        public string NotesLastEditedText
+        {
+            get => _notesLastEditedText;
+            private set => SetProperty(ref _notesLastEditedText, value);
+        }
 
         private void BuildEntries()
         {
@@ -150,10 +228,15 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
             }
 
             ApplyVerbGroupState(_session.GetVerbGroupStateForRestore());
+            LoadVerbDetails(verb);
             UpdateNavigation();
 
             OnPropertyChanged(nameof(ShowFurigana));
             OnPropertyChanged(nameof(IsClearEnabled));
+            OnPropertyChanged(nameof(IsNotesEnabled));
+            OnPropertyChanged(nameof(IsVerbLoaded));
+            OnPropertyChanged(nameof(IsNotesSavedVisible));
+            OnPropertyChanged(nameof(CanSaveNotes));
         }
 
         private void SetStudyUiEnabled(bool enabled)
@@ -164,9 +247,14 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
                 FuriganaReading = string.Empty;
                 CanPrev = false;
                 CanNext = false;
+                LoadVerbDetails(null);
             }
 
             OnPropertyChanged(nameof(IsClearEnabled));
+            OnPropertyChanged(nameof(IsNotesEnabled));
+            OnPropertyChanged(nameof(IsVerbLoaded));
+            OnPropertyChanged(nameof(IsNotesSavedVisible));
+            OnPropertyChanged(nameof(CanSaveNotes));
         }
 
         private void UpdateNavigation()
@@ -282,6 +370,130 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
             OnVerbGroupStateChanged();
         }
 
+        private void LoadVerbDetails(Verb? verb)
+        {
+            _suppressNotesSave = true;
+            CancelFavoriteSave();
+
+            IsFavorite = verb?.IsFavorite ?? false;
+            NotesText = verb?.UserNotes?.Text ?? string.Empty;
+
+            var lastEdited = verb?.UserNotes?.LastUpdatedUtc ?? verb?.UserNotes?.CreatedUtc;
+            UpdateNotesLastEditedText(lastEdited);
+            ResetNotesSavedState();
+
+            Dispatcher.UIThread.Post(() => _suppressNotesSave = false);
+        }
+
+        private void UpdateNotesLastEditedText(DateTime? lastEditedUtc)
+        {
+            if (lastEditedUtc is null)
+            {
+                NotesLastEditedText = "Last edited: -";
+                return;
+            }
+
+            var local = lastEditedUtc.Value.ToLocalTime();
+            NotesLastEditedText = $"Last edited: {local:g}";
+        }
+
+        private void ToggleDetails()
+        {
+            IsDetailsVisible = !IsDetailsVisible;
+        }
+
+        private void RaiseSaveNotesCanExecute()
+        {
+            if (SaveNotesCommand is RelayCommand cmd)
+                cmd.RaiseCanExecuteChanged();
+        }
+
+        private void MarkUnsavedChanges()
+        {
+            _hasUnsavedChanges = true;
+            _isNotesSavedVisible = false;
+            OnPropertyChanged(nameof(IsNotesSavedVisible));
+            OnPropertyChanged(nameof(CanSaveNotes));
+            RaiseSaveNotesCanExecute();
+        }
+
+        private void ResetNotesSavedState()
+        {
+            _hasUnsavedChanges = false;
+            _isNotesSavedVisible = false;
+            OnPropertyChanged(nameof(IsNotesSavedVisible));
+            OnPropertyChanged(nameof(CanSaveNotes));
+            RaiseSaveNotesCanExecute();
+        }
+
+        private void SaveNotes()
+        {
+            if (_session.CurrentVerb is null)
+                return;
+
+            CancelFavoriteSave();
+            _session.SetFavorite(IsFavorite);
+            var updated = _session.SetNotes(NotesText);
+            UpdateNotesLastEditedText(updated);
+            _hasUnsavedChanges = false;
+            _isNotesSavedVisible = true;
+            OnPropertyChanged(nameof(IsNotesSavedVisible));
+            OnPropertyChanged(nameof(CanSaveNotes));
+            RaiseSaveNotesCanExecute();
+        }
+
+        public void NotifyNotesEdited()
+        {
+            if (_suppressNotesSave)
+                return;
+
+            MarkUnsavedChanges();
+        }
+
+        private void ScheduleFavoriteSave()
+        {
+            if (_session.CurrentVerb is null)
+                return;
+
+            _favoriteSaveVerbId = _session.CurrentVerb.Id;
+            _favoriteSaveTimer ??= new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(400)
+            };
+
+            _favoriteSaveTimer.Stop();
+            _favoriteSaveTimer.Tick -= OnFavoriteSaveTick;
+            _favoriteSaveTimer.Tick += OnFavoriteSaveTick;
+            _favoriteSaveTimer.Start();
+        }
+
+        private void OnFavoriteSaveTick(object? sender, EventArgs e)
+        {
+            if (_favoriteSaveTimer is null)
+                return;
+
+            _favoriteSaveTimer.Stop();
+            _favoriteSaveTimer.Tick -= OnFavoriteSaveTick;
+            if (_session.CurrentVerb is null || _favoriteSaveVerbId != _session.CurrentVerb.Id)
+                return;
+
+            _session.SetFavorite(IsFavorite);
+        }
+
+        private void CancelFavoriteSave()
+        {
+            _favoriteSaveVerbId = null;
+            _favoriteSaveTimer?.Stop();
+            if (_favoriteSaveTimer is not null)
+                _favoriteSaveTimer.Tick -= OnFavoriteSaveTick;
+        }
+
+        public void Dispose()
+        {
+            CancelFavoriteSave();
+            _favoriteSaveTimer = null;
+        }
+
         private Avalonia.Media.IBrush GetVerbGroupForeground(VerbGroupEnum group)
         {
             if (_selectedVerbGroup != group || !_verbGroupIsCorrect.HasValue)
@@ -322,18 +534,16 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
                 WindowStartupLocation = WindowStartupLocation.CenterOwner
             };
 
-            var result = await window.ShowDialog<bool?>(_owner);
-            if (result == true)
+            await window.ShowDialog<bool?>(_owner);
+
+            var initial = _session.GetInitialVerb();
+            if (initial != null)
             {
-                var initial = _session.GetInitialVerb();
-                if (initial != null)
-                {
-                    LoadVerb(initial);
-                }
-                else
-                {
-                    SetStudyUiEnabled(false);
-                }
+                LoadVerb(initial);
+            }
+            else
+            {
+                SetStudyUiEnabled(false);
             }
         }
 

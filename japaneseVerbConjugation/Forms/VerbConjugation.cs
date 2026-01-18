@@ -1,4 +1,6 @@
 ﻿using JapaneseVerbConjugation.Controls;
+using JapaneseVerbConjugation.Core.Models;
+using JapaneseVerbConjugation.Core.SharedResources.Logic;
 using JapaneseVerbConjugation.Enums;
 using JapaneseVerbConjugation.Forms;
 using JapaneseVerbConjugation.Models;
@@ -37,6 +39,8 @@ namespace JapaneseVerbConjugation
 
             _session = VerbStudySession.LoadFromStorage();
 
+            FormClosing += OnFormClosing;
+
             // ApplyUserOptions will call RebuildConjugationRows() on startup
             // This creates the entry states and controls BEFORE we try to load saved answers
             ApplyUserOptions(_session.Options, true);
@@ -51,6 +55,11 @@ namespace JapaneseVerbConjugation
             {
                 LoadNextVerb(null, verbStoreEmpty: true);
             }
+        }
+
+        private void OnFormClosing(object? sender, FormClosingEventArgs e)
+        {
+            VerbStoreStore.CreateBackup();
         }
 
         #endregion
