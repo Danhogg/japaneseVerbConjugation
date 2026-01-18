@@ -44,12 +44,15 @@ namespace japaneseVerbConjugationTests
             // Act
             var dict = DictionaryLoader.LoadOrThrowFromPath(path);
 
-            // Assert
-            Assert.That(dict.TryGetReading("食べる", out var reading), Is.True);
-            Assert.That(reading, Is.EqualTo("たべる"));
-            
-            Assert.That(dict.TryGetVerbGroup("食べる", out var group1), Is.True);
-            Assert.That(group1, Is.EqualTo(JapaneseVerbConjugation.Enums.VerbGroupEnum.Ichidan));
+            using (Assert.EnterMultipleScope())
+            {
+                // Assert
+                Assert.That(dict.TryGetReading("食べる", out var reading), Is.True);
+                Assert.That(reading, Is.EqualTo("たべる"));
+
+                Assert.That(dict.TryGetVerbGroup("食べる", out var group1), Is.True);
+                Assert.That(group1, Is.EqualTo(JapaneseVerbConjugation.Enums.VerbGroupEnum.Ichidan));
+            }
         }
 
         [Test]

@@ -33,7 +33,7 @@ namespace japaneseVerbConjugationTests
             var result = HintMasking.MaskHint("食べる");
             Assert.That(result, Does.Contain("食"));
             // べ should be masked, る should be kept (last with prev hiragana)
-            Assert.That(result.Length, Is.EqualTo(3));
+            Assert.That(result, Has.Length.EqualTo(3));
         }
 
         [Test]
@@ -71,31 +71,43 @@ namespace japaneseVerbConjugationTests
         [Test]
         public void IsHiragana_ValidHiragana_ReturnsTrue()
         {
-            Assert.That(HintMasking.IsHiragana('あ'), Is.True);
-            Assert.That(HintMasking.IsHiragana('る'), Is.True);
-            Assert.That(HintMasking.IsHiragana('ん'), Is.True);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(HintMasking.IsHiragana('あ'), Is.True);
+                Assert.That(HintMasking.IsHiragana('る'), Is.True);
+                Assert.That(HintMasking.IsHiragana('ん'), Is.True);
+            }
         }
 
         [Test]
         public void IsHiragana_Katakana_ReturnsFalse()
         {
-            Assert.That(HintMasking.IsHiragana('ア'), Is.False);
-            Assert.That(HintMasking.IsHiragana('ル'), Is.False);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(HintMasking.IsHiragana('ア'), Is.False);
+                Assert.That(HintMasking.IsHiragana('ル'), Is.False);
+            }
         }
 
         [Test]
         public void IsHiragana_Kanji_ReturnsFalse()
         {
-            Assert.That(HintMasking.IsHiragana('食'), Is.False);
-            Assert.That(HintMasking.IsHiragana('泳'), Is.False);
-            Assert.That(HintMasking.IsHiragana('行'), Is.False);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(HintMasking.IsHiragana('食'), Is.False);
+                Assert.That(HintMasking.IsHiragana('泳'), Is.False);
+                Assert.That(HintMasking.IsHiragana('行'), Is.False);
+            }
         }
 
         [Test]
         public void IsHiragana_ASCII_ReturnsFalse()
         {
-            Assert.That(HintMasking.IsHiragana('a'), Is.False);
-            Assert.That(HintMasking.IsHiragana('1'), Is.False);
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(HintMasking.IsHiragana('a'), Is.False);
+                Assert.That(HintMasking.IsHiragana('1'), Is.False);
+            }
         }
     }
 }

@@ -9,8 +9,11 @@ public sealed class NoteSavePolicyTests
     {
         var decision = NoteSavePolicy.Evaluate(null, null);
 
-        Assert.That(decision.Action, Is.EqualTo(NoteSaveAction.None));
-        Assert.That(decision.NormalizedText, Is.Null);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(decision.Action, Is.EqualTo(NoteSaveAction.None));
+            Assert.That(decision.NormalizedText, Is.Null);
+        }
     }
 
     [Test]
@@ -18,8 +21,11 @@ public sealed class NoteSavePolicyTests
     {
         var decision = NoteSavePolicy.Evaluate(null, "   ");
 
-        Assert.That(decision.Action, Is.EqualTo(NoteSaveAction.None));
-        Assert.That(decision.NormalizedText, Is.Null);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(decision.Action, Is.EqualTo(NoteSaveAction.None));
+            Assert.That(decision.NormalizedText, Is.Null);
+        }
     }
 
     [Test]
@@ -27,8 +33,11 @@ public sealed class NoteSavePolicyTests
     {
         var decision = NoteSavePolicy.Evaluate("hello", "   ");
 
-        Assert.That(decision.Action, Is.EqualTo(NoteSaveAction.Clear));
-        Assert.That(decision.NormalizedText, Is.Null);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(decision.Action, Is.EqualTo(NoteSaveAction.Clear));
+            Assert.That(decision.NormalizedText, Is.Null);
+        }
     }
 
     [Test]
@@ -36,8 +45,11 @@ public sealed class NoteSavePolicyTests
     {
         var decision = NoteSavePolicy.Evaluate("hello", "");
 
-        Assert.That(decision.Action, Is.EqualTo(NoteSaveAction.Clear));
-        Assert.That(decision.NormalizedText, Is.Null);
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(decision.Action, Is.EqualTo(NoteSaveAction.Clear));
+            Assert.That(decision.NormalizedText, Is.Null);
+        }
     }
 
     [Test]
@@ -45,8 +57,11 @@ public sealed class NoteSavePolicyTests
     {
         var decision = NoteSavePolicy.Evaluate(null, "  new note  ");
 
-        Assert.That(decision.Action, Is.EqualTo(NoteSaveAction.Save));
-        Assert.That(decision.NormalizedText, Is.EqualTo("new note"));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(decision.Action, Is.EqualTo(NoteSaveAction.Save));
+            Assert.That(decision.NormalizedText, Is.EqualTo("new note"));
+        }
     }
 
     [Test]
@@ -54,7 +69,10 @@ public sealed class NoteSavePolicyTests
     {
         var decision = NoteSavePolicy.Evaluate("old", "updated");
 
-        Assert.That(decision.Action, Is.EqualTo(NoteSaveAction.Save));
-        Assert.That(decision.NormalizedText, Is.EqualTo("updated"));
+        using (Assert.EnterMultipleScope())
+        {
+            Assert.That(decision.Action, Is.EqualTo(NoteSaveAction.Save));
+            Assert.That(decision.NormalizedText, Is.EqualTo("updated"));
+        }
     }
 }
