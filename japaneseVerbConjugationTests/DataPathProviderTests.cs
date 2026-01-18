@@ -19,6 +19,7 @@ public sealed class DataPathProviderTests
         finally
         {
             DataPathProvider.SetDataRoot(null);
+            CleanupTempDir(tempDir);
         }
     }
 
@@ -35,6 +36,7 @@ public sealed class DataPathProviderTests
         }
 
         DataPathProvider.SetDataRoot(null);
+        CleanupTempDir(tempDir);
     }
 
     [Test]
@@ -52,6 +54,8 @@ public sealed class DataPathProviderTests
         }
 
         DataPathProvider.SetDataRoot(null);
+        CleanupTempDir(tempDir);
+        CleanupTempDir(altDir);
     }
 
     [Test]
@@ -69,6 +73,7 @@ public sealed class DataPathProviderTests
         finally
         {
             DataPathProvider.SetDataRoot(null);
+            CleanupTempDir(tempDir);
         }
     }
 
@@ -89,6 +94,7 @@ public sealed class DataPathProviderTests
         finally
         {
             DataPathProvider.SetDataRoot(null);
+            CleanupTempDir(tempDir);
         }
     }
 
@@ -97,5 +103,18 @@ public sealed class DataPathProviderTests
         var dir = Path.Combine(Path.GetTempPath(), "jvc-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         return dir;
+    }
+
+    private static void CleanupTempDir(string path)
+    {
+        try
+        {
+            if (Directory.Exists(path))
+                Directory.Delete(path, recursive: true);
+        }
+        catch
+        {
+            // Best-effort cleanup for test temp folders.
+        }
     }
 }

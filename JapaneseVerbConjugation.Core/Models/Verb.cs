@@ -15,16 +15,16 @@ namespace JapaneseVerbConjugation.Models
 
         // Optional metadata
         public string? Meaning { get; set; }
-        public bool IsFavorite { get; set; } = false;
+        public bool IsFavorite { get; set; }
 
         // Cached conjugations
         public Dictionary<ConjugationFormEnum, ConjugationAnswer> Conjugations { get; set; } = [];
 
         // Track if verb group has been answered correctly
-        public bool VerbGroupAnsweredCorrectly { get; set; } = false;
+        public bool VerbGroupAnsweredCorrectly { get; set; }
 
         // Track which verb is currently active (the one being studied)
-        public bool Active { get; set; } = false;
+        public bool Active { get; set; }
 
         public UserNote? UserNotes { get; set; }
     }
