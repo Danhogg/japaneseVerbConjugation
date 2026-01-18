@@ -31,3 +31,6 @@ I would also like to allow the user to search through the verbs so they can pick
 
 #### Curate this readme a little better and pull all desired features to add down here
 We will also add a more powerful clear that will let the user clear all conjugations or conjugations for certain levels.  
+
+
+##### I would like to note. Particularly the avalonia UI is largely coded with and heavily leaned on AI. I want to keep developing while studing Japanese and exploring Japan but, as you can imagine, taking the time to really learn Avalonia is not something I have at the minute, particularly while I work on a separate website which is where I focus more of my dev time when I have it. This app is to really just help me study Japanese so having the UI largely coded by AI and reviewed by me while I also test the actual core functionality and code a bit more of that myself just works for saving time on this. If this is upgraded into a website or app that could live on an appstore or playstore long term I will spend longer on this manually developing a lot more of the UI. For now AI is getting what I need in there in an efficient manner with minimal prompting. It's perfect for now even if it leads to some slightly more ineffiecient frontend code or slightly odd coding decisions when it comes to the UI
