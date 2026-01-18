@@ -110,15 +110,21 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
             }
         }
 
-
         public bool IsClearEnabled => _session.CurrentVerb != null;
         public bool IsNotesEnabled => _session.CurrentVerb != null;
         public bool IsVerbLoaded => _session.CurrentVerb != null;
         public bool IsNotesSavedVisible => _session.CurrentVerb != null && _isNotesSavedVisible;
         public bool CanSaveNotes
-            => _session.CurrentVerb != null
-               && _hasUnsavedChanges
-               && NoteSavePolicy.Evaluate(_session.CurrentVerb.UserNotes?.Text, NotesText).Action != NoteSaveAction.None;
+        {
+            get
+            {
+                var currentVerb = _session.CurrentVerb;
+                if (currentVerb is null || !_hasUnsavedChanges)
+                    return false;
+
+                return NoteSavePolicy.Evaluate(currentVerb.UserNotes?.Text, NotesText).Action != NoteSaveAction.None;
+            }
+        }
 
         public bool IsCheckVerbGroupEnabled => IsVerbLoaded && !_verbGroupLocked;
         public bool IsVerbGroupHitTestEnabled => IsVerbLoaded && !_verbGroupLocked;
@@ -424,6 +430,7 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
             if (_session.CurrentVerb is null)
                 return;
 
+            CancelFavoriteSave();
             _session.SetFavorite(IsFavorite);
             var updated = _session.SetNotes(NotesText);
             UpdateNotesLastEditedText(updated);
