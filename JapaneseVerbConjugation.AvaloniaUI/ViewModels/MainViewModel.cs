@@ -28,6 +28,14 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
         private bool _verbGroupLocked;
         private VerbGroupEnum? _selectedVerbGroup;
         private bool? _verbGroupIsCorrect;
+        private bool _isDetailsVisible;
+        private bool _isFavorite;
+        private string _notesText = string.Empty;
+        private string _notesLastEditedText = "Last edited: -";
+        private bool _isNotesSavedVisible;
+        private bool _hasUnsavedChanges;
+        private bool _suppressNotesSave;
+        private DispatcherTimer? _favoriteSaveTimer;
 
         public MainViewModel(Window owner)
         {
@@ -45,6 +53,8 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
             OptionsCommand = new RelayCommand(async _ => await ShowOptionsAsync());
             ImportCommand = new RelayCommand(async _ => await ShowImportAsync());
             ClearCommand = new RelayCommand(_ => _ = ClearAsync(), _ => IsClearEnabled);
+            ToggleDetailsCommand = new RelayCommand(_ => ToggleDetails());
+            SaveNotesCommand = new RelayCommand(_ => SaveNotes(), _ => CanSaveNotes);
 
             WindowTitle = VersionInfo.GetApplicationTitle();
 
@@ -100,6 +110,12 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
         }
 
         public bool IsClearEnabled => _session.CurrentVerb != null;
+        public bool IsNotesEnabled => _session.CurrentVerb != null;
+        public bool IsNotesSavedVisible => _session.CurrentVerb != null && _isNotesSavedVisible;
+        public bool CanSaveNotes
+            => _session.CurrentVerb != null
+               && _hasUnsavedChanges
+               && NoteSavePolicy.Evaluate(_session.CurrentVerb.UserNotes?.Text, NotesText).Action != NoteSaveAction.None;
 
         public bool IsCheckVerbGroupEnabled => !_verbGroupLocked;
         public bool IsVerbGroupHitTestEnabled => !_verbGroupLocked;
@@ -121,6 +137,58 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
         public ICommand OptionsCommand { get; }
         public ICommand ImportCommand { get; }
         public ICommand ClearCommand { get; }
+        public ICommand ToggleDetailsCommand { get; }
+        public ICommand SaveNotesCommand { get; }
+
+        public bool IsDetailsVisible
+        {
+            get => _isDetailsVisible;
+            set
+            {
+                if (SetProperty(ref _isDetailsVisible, value))
+                {
+                    OnPropertyChanged(nameof(IsDetailsHidden));
+                    OnPropertyChanged(nameof(DetailsToggleLabel));
+                    OnPropertyChanged(nameof(DetailsWidth));
+                }
+            }
+        }
+
+        public bool IsDetailsHidden => !_isDetailsVisible;
+
+        public string DetailsToggleLabel => IsDetailsVisible ? "Hide >" : "Show >";
+
+        public double DetailsWidth => IsDetailsVisible ? 280 : 0;
+
+        public bool IsFavorite
+        {
+            get => _isFavorite;
+            set
+            {
+                if (SetProperty(ref _isFavorite, value) && !_suppressNotesSave)
+                {
+                    ScheduleFavoriteSave();
+                }
+            }
+        }
+
+        public string NotesText
+        {
+            get => _notesText;
+            set
+            {
+                if (SetProperty(ref _notesText, value) && !_suppressNotesSave)
+                {
+                    MarkUnsavedChanges();
+                }
+            }
+        }
+
+        public string NotesLastEditedText
+        {
+            get => _notesLastEditedText;
+            private set => SetProperty(ref _notesLastEditedText, value);
+        }
 
         private void BuildEntries()
         {
@@ -150,10 +218,14 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
             }
 
             ApplyVerbGroupState(_session.GetVerbGroupStateForRestore());
+            LoadVerbDetails(verb);
             UpdateNavigation();
 
             OnPropertyChanged(nameof(ShowFurigana));
             OnPropertyChanged(nameof(IsClearEnabled));
+            OnPropertyChanged(nameof(IsNotesEnabled));
+            OnPropertyChanged(nameof(IsNotesSavedVisible));
+            OnPropertyChanged(nameof(CanSaveNotes));
         }
 
         private void SetStudyUiEnabled(bool enabled)
@@ -164,9 +236,13 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
                 FuriganaReading = string.Empty;
                 CanPrev = false;
                 CanNext = false;
+                LoadVerbDetails(null);
             }
 
             OnPropertyChanged(nameof(IsClearEnabled));
+            OnPropertyChanged(nameof(IsNotesEnabled));
+            OnPropertyChanged(nameof(IsNotesSavedVisible));
+            OnPropertyChanged(nameof(CanSaveNotes));
         }
 
         private void UpdateNavigation()
@@ -280,6 +356,107 @@ namespace JapaneseVerbConjugation.AvaloniaUI.ViewModels
             _selectedVerbGroup = group;
             _verbGroupIsCorrect = null;
             OnVerbGroupStateChanged();
+        }
+
+        private void LoadVerbDetails(Verb? verb)
+        {
+            _suppressNotesSave = true;
+
+            IsFavorite = verb?.IsFavorite ?? false;
+            NotesText = verb?.UserNotes?.Text ?? string.Empty;
+
+            var lastEdited = verb?.UserNotes?.LastUpdatedUtc ?? verb?.UserNotes?.CreatedUtc;
+            UpdateNotesLastEditedText(lastEdited);
+            ResetNotesSavedState();
+
+            _suppressNotesSave = false;
+        }
+
+        private void UpdateNotesLastEditedText(DateTime? lastEditedUtc)
+        {
+            if (lastEditedUtc is null)
+            {
+                NotesLastEditedText = "Last edited: -";
+                return;
+            }
+
+            var local = lastEditedUtc.Value.ToLocalTime();
+            NotesLastEditedText = $"Last edited: {local:g}";
+        }
+
+        private void ToggleDetails()
+        {
+            IsDetailsVisible = !IsDetailsVisible;
+        }
+
+        private void RaiseSaveNotesCanExecute()
+        {
+            if (SaveNotesCommand is RelayCommand cmd)
+                cmd.RaiseCanExecuteChanged();
+        }
+
+        private void MarkUnsavedChanges()
+        {
+            _hasUnsavedChanges = true;
+            _isNotesSavedVisible = false;
+            OnPropertyChanged(nameof(IsNotesSavedVisible));
+            OnPropertyChanged(nameof(CanSaveNotes));
+            RaiseSaveNotesCanExecute();
+        }
+
+        private void ResetNotesSavedState()
+        {
+            _hasUnsavedChanges = false;
+            _isNotesSavedVisible = false;
+            OnPropertyChanged(nameof(IsNotesSavedVisible));
+            OnPropertyChanged(nameof(CanSaveNotes));
+            RaiseSaveNotesCanExecute();
+        }
+
+        private void SaveNotes()
+        {
+            if (_session.CurrentVerb is null)
+                return;
+
+            _session.SetFavorite(IsFavorite);
+            var updated = _session.SetNotes(NotesText);
+            UpdateNotesLastEditedText(updated);
+            _hasUnsavedChanges = false;
+            _isNotesSavedVisible = true;
+            OnPropertyChanged(nameof(IsNotesSavedVisible));
+            OnPropertyChanged(nameof(CanSaveNotes));
+            RaiseSaveNotesCanExecute();
+        }
+
+        public void NotifyNotesEdited()
+        {
+            if (_suppressNotesSave)
+                return;
+
+            MarkUnsavedChanges();
+        }
+
+        private void ScheduleFavoriteSave()
+        {
+            if (_session.CurrentVerb is null)
+                return;
+
+            _favoriteSaveTimer ??= new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(400)
+            };
+
+            _favoriteSaveTimer.Stop();
+            _favoriteSaveTimer.Tick -= OnFavoriteSaveTick;
+            _favoriteSaveTimer.Tick += OnFavoriteSaveTick;
+            _favoriteSaveTimer.Start();
+        }
+
+        private void OnFavoriteSaveTick(object? sender, EventArgs e)
+        {
+            _favoriteSaveTimer?.Stop();
+            _favoriteSaveTimer!.Tick -= OnFavoriteSaveTick;
+            _session.SetFavorite(IsFavorite);
         }
 
         private Avalonia.Media.IBrush GetVerbGroupForeground(VerbGroupEnum group)

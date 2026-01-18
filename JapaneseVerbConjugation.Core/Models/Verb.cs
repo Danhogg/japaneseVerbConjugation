@@ -15,6 +15,7 @@ namespace JapaneseVerbConjugation.Models
 
         // Optional metadata
         public string? Meaning { get; set; }
+        public bool IsFavorite { get; set; } = false;
 
         // Cached conjugations
         public Dictionary<ConjugationFormEnum, ConjugationAnswer> Conjugations { get; set; } = [];

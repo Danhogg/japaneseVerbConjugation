@@ -1,5 +1,9 @@
 # JapaneseVerbConjugation
 
+## Project status
+- Avalonia UI is the primary UI going forward.
+- WinForms UI is deprecated and kept only as a legacy reference during transition.
+
 ## Aims
 The aim of this app is to make it easier for people to study verb conjugations in Japanese. There are a lot of conjugations so this app is to help people remember how to conjugate verbs quickly. There are also many different verbs that sound similar or don't obviously fall into godan or ichidan. This should help practice that quickly and also help users learn which groups the verbs fall into (obvious when you have time to think but hard when you are less familiar or trying to talk quick)
 

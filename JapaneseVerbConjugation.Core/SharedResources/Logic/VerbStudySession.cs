@@ -1,3 +1,4 @@
+using System;
 using JapaneseVerbConjugation.Enums;
 using JapaneseVerbConjugation.Models;
 using JapaneseVerbConjugation.Models.ModelsForSerialising;
@@ -70,6 +71,51 @@ namespace JapaneseVerbConjugation.SharedResources.Logic
                 entryStates,
                 ExpectedAnswers,
                 Options);
+        }
+
+        public bool SetFavorite(bool isFavorite)
+        {
+            if (CurrentVerb is null)
+                return false;
+
+            CurrentVerb.IsFavorite = isFavorite;
+            VerbStoreStore.Save(Store);
+            return true;
+        }
+
+        public DateTime? SetNotes(string? notes)
+        {
+            if (CurrentVerb is null)
+                return null;
+
+            var decision = NoteSavePolicy.Evaluate(CurrentVerb.UserNotes?.Text, notes);
+            if (decision.Action == NoteSaveAction.None)
+                return null;
+
+            if (decision.Action == NoteSaveAction.Clear)
+            {
+                CurrentVerb.UserNotes = null;
+                VerbStoreStore.Save(Store);
+                return null;
+            }
+
+            if (CurrentVerb.UserNotes is null)
+            {
+                CurrentVerb.UserNotes = new UserNote
+                {
+                    Text = decision.NormalizedText ?? string.Empty,
+                    CreatedUtc = DateTime.UtcNow,
+                    LastUpdatedUtc = DateTime.UtcNow
+                };
+            }
+            else
+            {
+                CurrentVerb.UserNotes.Text = decision.NormalizedText ?? string.Empty;
+                CurrentVerb.UserNotes.LastUpdatedUtc = DateTime.UtcNow;
+            }
+
+            VerbStoreStore.Save(Store);
+            return CurrentVerb.UserNotes.LastUpdatedUtc ?? CurrentVerb.UserNotes.CreatedUtc;
         }
 
         public ConjugationResultEnum CheckAnswer(ConjugationEntryState state)

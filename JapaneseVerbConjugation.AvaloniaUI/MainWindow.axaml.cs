@@ -10,4 +10,12 @@ public partial class MainWindow : Window
         InitializeComponent();
         DataContext = new MainViewModel(this);
     }
+
+    private void OnNotesTextChanged(object? sender, TextChangedEventArgs e)
+    {
+        if (DataContext is MainViewModel vm)
+        {
+            vm.NotifyNotesEdited();
+        }
+    }
 }

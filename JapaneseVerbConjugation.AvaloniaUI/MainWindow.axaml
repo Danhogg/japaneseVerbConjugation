@@ -10,140 +10,249 @@
         x:Class="JapaneseVerbConjugation.AvaloniaUI.MainWindow"
         x:CompileBindings="False"
         Title="{Binding WindowTitle}"
-        Width="760"
+        Width="1000"
         Height="600"
-        MinWidth="760"
+        MinWidth="1080"
         MinHeight="600">
-    <Grid RowDefinitions="Auto,*,Auto" Margin="10" RowSpacing="6">
-        <StackPanel Grid.Row="0" Spacing="6">
-            <TextBlock Text="{Binding CurrentVerb}"
-                       FontSize="36"
-                       FontWeight="Bold"
-                       HorizontalAlignment="Center" />
-            <TextBlock Text="{Binding FuriganaReading}"
-                       FontSize="14"
-                       FontWeight="Bold"
-                       HorizontalAlignment="Center"
-                       IsVisible="{Binding ShowFurigana}" />
-
-            <Border BorderBrush="#DDDDDD" BorderThickness="1" Padding="6" HorizontalAlignment="Center">
-                <StackPanel Spacing="4">
-                    <TextBlock Text="Verb Group"
+    <Window.Styles>
+        <Style Selector="ToggleButton.favStar">
+            <Setter Property="FontSize" Value="20" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="BorderBrush" Value="Black" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Grid>
+                        <TextBlock Text="{TemplateBinding Content}"
+                                   FontSize="24"
+                                   Foreground="{TemplateBinding BorderBrush}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center" />
+                        <TextBlock Text="{TemplateBinding Content}"
+                                   FontSize="20"
+                                   Foreground="{TemplateBinding Foreground}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="ToggleButton.favStar:checked">
+            <Setter Property="Foreground" Value="#D4A000" />
+            <Setter Property="BorderBrush" Value="Black" />
+        </Style>
+    </Window.Styles>
+    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Margin="10">
+        <Grid Grid.Column="0" RowDefinitions="Auto,*,Auto" RowSpacing="6">
+            <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0" Spacing="6">
+                    <TextBlock Text="{Binding CurrentVerb}"
+                               FontSize="36"
                                FontWeight="Bold"
                                HorizontalAlignment="Center" />
-                    <StackPanel Orientation="Horizontal" Spacing="20"
-                                IsHitTestVisible="{Binding IsVerbGroupHitTestEnabled}">
-                        <RadioButton Content="五段"
-                                     IsChecked="{Binding IsGodanSelected}"
-                                     Command="{Binding SelectVerbGroupCommand}"
-                                     CommandParameter="{x:Static enums:VerbGroupEnum.Godan}"
-                                     Foreground="{Binding GodanForeground}" />
-                        <RadioButton Content="一段"
-                                     IsChecked="{Binding IsIchidanSelected}"
-                                     Command="{Binding SelectVerbGroupCommand}"
-                                     CommandParameter="{x:Static enums:VerbGroupEnum.Ichidan}"
-                                     Foreground="{Binding IchidanForeground}" />
-                        <RadioButton Content="不規則"
-                                     IsChecked="{Binding IsIrregularSelected}"
-                                     Command="{Binding SelectVerbGroupCommand}"
-                                     CommandParameter="{x:Static enums:VerbGroupEnum.Irregular}"
-                                     Foreground="{Binding IrregularForeground}" />
-                    </StackPanel>
+                    <TextBlock Text="{Binding FuriganaReading}"
+                               FontSize="14"
+                               FontWeight="Bold"
+                               HorizontalAlignment="Center"
+                               IsVisible="{Binding ShowFurigana}" />
+
+                    <Border BorderBrush="#DDDDDD" BorderThickness="1" Padding="6" HorizontalAlignment="Center">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Verb Group"
+                                       FontWeight="Bold"
+                                       HorizontalAlignment="Center" />
+                            <StackPanel Orientation="Horizontal" Spacing="20"
+                                        IsHitTestVisible="{Binding IsVerbGroupHitTestEnabled}">
+                                <RadioButton Content="五段"
+                                             IsChecked="{Binding IsGodanSelected}"
+                                             Command="{Binding SelectVerbGroupCommand}"
+                                             CommandParameter="{x:Static enums:VerbGroupEnum.Godan}"
+                                             Foreground="{Binding GodanForeground}" />
+                                <RadioButton Content="一段"
+                                             IsChecked="{Binding IsIchidanSelected}"
+                                             Command="{Binding SelectVerbGroupCommand}"
+                                             CommandParameter="{x:Static enums:VerbGroupEnum.Ichidan}"
+                                             Foreground="{Binding IchidanForeground}" />
+                                <RadioButton Content="不規則"
+                                             IsChecked="{Binding IsIrregularSelected}"
+                                             Command="{Binding SelectVerbGroupCommand}"
+                                             CommandParameter="{x:Static enums:VerbGroupEnum.Irregular}"
+                                             Foreground="{Binding IrregularForeground}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Button Content="Check Group"
+                            Width="120"
+                            HorizontalAlignment="Center"
+                            Command="{Binding CheckVerbGroupCommand}"
+                            IsEnabled="{Binding IsCheckVerbGroupEnabled}" />
                 </StackPanel>
-            </Border>
 
-            <Button Content="Check Group"
-                    Width="120"
-                    HorizontalAlignment="Center"
-                    Command="{Binding CheckVerbGroupCommand}"
-                    IsEnabled="{Binding IsCheckVerbGroupEnabled}" />
-        </StackPanel>
+                <Button Grid.Column="1"
+                        Content="Show >"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Command="{Binding ToggleDetailsCommand}"
+                        IsVisible="{Binding IsDetailsHidden}" />
+            </Grid>
 
-        <ScrollViewer Grid.Row="1">
-            <ItemsControl x:Name="EntriesHost" ItemsSource="{Binding Entries}" Margin="0" HorizontalAlignment="Stretch">
-                <ItemsControl.Resources>
-                    <infra:ColumnWidthConverter x:Key="ColumnWidthConverter" MinItemWidth="360" />
-                </ItemsControl.Resources>
-                <ItemsControl.Styles>
-                    <Style Selector="ItemsControl > ContentPresenter">
-                        <Setter Property="Margin" Value="0,1" />
-                    </Style>
-                </ItemsControl.Styles>
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <WrapPanel Orientation="Horizontal" />
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Grid ColumnDefinitions="130,*,60,50,24"
-                              ColumnSpacing="3"
-                              Height="{Binding RowHeight}"
-                              Width="{Binding ElementName=EntriesHost, Path=Bounds.Width, Converter={StaticResource ColumnWidthConverter}}">
-                                <TextBlock Grid.Column="0"
-                                           Text="{Binding Label}"
-                                           FontSize="14"
-                                       TextWrapping="Wrap"
-                                       VerticalAlignment="{Binding LabelVerticalAlignment}" />
-                                <TextBox Grid.Column="1"
-                                         Text="{Binding UserInput, Mode=TwoWay}"
-                                         FontSize="14"
-                                         FontWeight="Bold"
-                                         Height="32"
-                                         Background="{Binding ResultBackground}"
-                                         IsReadOnly="{Binding IsInputReadOnly}"
-                                         IsHitTestVisible="{Binding IsInputHitTestVisible}"
-                                         VerticalContentAlignment="Center" />
-                                <Button Grid.Column="2"
-                                        Content="Check"
-                                        Height="32"
-                                        Command="{Binding DataContext.CheckEntryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                        CommandParameter="{Binding}"
-                                        IsEnabled="{Binding IsCheckEnabled}" />
-                                <Button Grid.Column="3"
-                                        Content="Hint"
-                                        Height="32"
-                                        Command="{Binding DataContext.HintEntryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                        CommandParameter="{Binding}"
-                                        IsEnabled="{Binding IsHintEnabled}" />
-                                <TextBlock Grid.Column="4"
-                                           Text="{Binding ResultSymbol}"
-                                           FontSize="18"
-                                           Foreground="{Binding ResultBrush}"
-                                           FontWeight="Bold"
-                                           VerticalAlignment="Center"
-                                           HorizontalAlignment="Left" />
-                        </Grid>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
+            <ScrollViewer Grid.Row="1">
+                <ItemsControl x:Name="EntriesHost" ItemsSource="{Binding Entries}" Margin="0" HorizontalAlignment="Stretch">
+                    <ItemsControl.Resources>
+                        <infra:ColumnWidthConverter x:Key="ColumnWidthConverter" MinItemWidth="380" MaxColumns="2" />
+                    </ItemsControl.Resources>
+                    <ItemsControl.Styles>
+                        <Style Selector="ItemsControl > ContentPresenter">
+                            <Setter Property="Margin" Value="0,1" />
+                        </Style>
+                    </ItemsControl.Styles>
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid ColumnDefinitions="130,*,60,50,24"
+                                  ColumnSpacing="3"
+                                  Height="{Binding RowHeight}"
+                                  Width="{Binding ElementName=EntriesHost, Path=Bounds.Width, Converter={StaticResource ColumnWidthConverter}}">
+                                    <TextBlock Grid.Column="0"
+                                               Text="{Binding Label}"
+                                               FontSize="14"
+                                           TextWrapping="Wrap"
+                                           VerticalAlignment="{Binding LabelVerticalAlignment}" />
+                                    <TextBox Grid.Column="1"
+                                             Text="{Binding UserInput, Mode=TwoWay}"
+                                             FontSize="14"
+                                             FontWeight="Bold"
+                                             Height="32"
+                                             Background="{Binding ResultBackground}"
+                                             IsReadOnly="{Binding IsInputReadOnly}"
+                                             IsHitTestVisible="{Binding IsInputHitTestVisible}"
+                                             VerticalContentAlignment="Center" />
+                                    <Button Grid.Column="2"
+                                            Content="Check"
+                                            Height="32"
+                                            Command="{Binding DataContext.CheckEntryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}"
+                                            IsEnabled="{Binding IsCheckEnabled}" />
+                                    <Button Grid.Column="3"
+                                            Content="Hint"
+                                            Height="32"
+                                            Command="{Binding DataContext.HintEntryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}"
+                                            IsEnabled="{Binding IsHintEnabled}" />
+                                    <TextBlock Grid.Column="4"
+                                               Text="{Binding ResultSymbol}"
+                                               FontSize="18"
+                                               Foreground="{Binding ResultBrush}"
+                                               FontWeight="Bold"
+                                               VerticalAlignment="Center"
+                                               HorizontalAlignment="Left" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
 
-        <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="8">
-            <Button Grid.Column="0"
-                    Content="Options"
-                    Width="90"
-                    Command="{Binding OptionsCommand}" />
-            <Button Grid.Column="1"
-                    Content="Import"
-                    Width="90"
-                    Command="{Binding ImportCommand}" />
-            <Button Grid.Column="2"
-                    Content="Clear"
-                    Width="90"
-                    HorizontalAlignment="Right"
-                    Command="{Binding ClearCommand}"
-                    IsEnabled="{Binding IsClearEnabled}" />
-            <Button Grid.Column="3"
-                    Content="Prev Verb"
-                    Width="100"
-                    Command="{Binding PrevVerbCommand}"
-                    IsEnabled="{Binding CanPrev}" />
-            <Button Grid.Column="4"
-                    Content="Next Verb"
-                    Width="100"
-                    Command="{Binding NextVerbCommand}"
-                    IsEnabled="{Binding CanNext}" />
+            <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="8">
+                <Button Grid.Column="0"
+                        Content="Options"
+                        Width="90"
+                        Command="{Binding OptionsCommand}" />
+                <Button Grid.Column="1"
+                        Content="Import"
+                        Width="90"
+                        Command="{Binding ImportCommand}" />
+                <Button Grid.Column="2"
+                        Content="Clear"
+                        Width="90"
+                        HorizontalAlignment="Right"
+                        Command="{Binding ClearCommand}"
+                        IsEnabled="{Binding IsClearEnabled}" />
+                <Button Grid.Column="3"
+                        Content="Prev Verb"
+                        Width="100"
+                        Command="{Binding PrevVerbCommand}"
+                        IsEnabled="{Binding CanPrev}" />
+                <Button Grid.Column="4"
+                        Content="Next Verb"
+                        Width="100"
+                        Command="{Binding NextVerbCommand}"
+                        IsEnabled="{Binding CanNext}" />
+            </Grid>
         </Grid>
+
+        <Border Grid.Column="1"
+                Width="{Binding DetailsWidth}"
+                BorderBrush="#DDDDDD"
+                BorderThickness="1"
+                Background="#FAFAFA"
+                CornerRadius="4"
+                Padding="10">
+            <Border.Transitions>
+                <Transitions>
+                    <DoubleTransition Property="Width" Duration="0:0:0.2" />
+                </Transitions>
+            </Border.Transitions>
+            <Grid RowDefinitions="Auto,Auto,Auto,*,Auto"
+                  RowSpacing="10"
+                  IsVisible="{Binding IsDetailsVisible}"
+                  IsHitTestVisible="{Binding IsDetailsVisible}">
+                <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+                    <TextBlock Text="Verb Details"
+                               FontSize="16"
+                               FontWeight="Bold"
+                               VerticalAlignment="Center" />
+                    <Button Grid.Column="1"
+                            Content="Hide >"
+                            Command="{Binding ToggleDetailsCommand}" />
+                </Grid>
+
+                <Border Grid.Row="1" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="0,0,0,8">
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <ToggleButton Classes="favStar"
+                                      IsChecked="{Binding IsFavorite}"
+                                      Content="★"
+                                      Focusable="False" />
+                        <TextBlock Text="Favorite" FontSize="14" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Border>
+
+                <TextBlock Grid.Row="2" Text="Notes" FontSize="14" FontWeight="Bold" />
+
+                <Border Grid.Row="3"
+                        BorderBrush="#E0D9A3"
+                        BorderThickness="1"
+                        CornerRadius="4"
+                        Background="#FFF7D6"
+                        Padding="6">
+                    <TextBox Text="{Binding NotesText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             TextChanged="OnNotesTextChanged"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             IsEnabled="{Binding IsNotesEnabled}" />
+                </Border>
+
+                <Grid Grid.Row="4" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="4">
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" IsVisible="{Binding IsNotesSavedVisible}">
+                        <TextBlock Text="●" Foreground="#6AAF2D" />
+                        <TextBlock Text="Saved" />
+                    </StackPanel>
+                    <Button Grid.Row="0"
+                            Grid.Column="1"
+                            Content="Save"
+                            Width="60"
+                            Height="28"
+                            Command="{Binding SaveNotesCommand}"
+                            IsEnabled="{Binding CanSaveNotes}" />
+                    <TextBlock Grid.Row="1" Text="{Binding NotesLastEditedText}" />
+                </Grid>
+            </Grid>
+        </Border>
     </Grid>
 </Window>

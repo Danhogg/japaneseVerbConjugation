@@ -7,6 +7,7 @@ namespace JapaneseVerbConjugation.AvaloniaUI.Infrastructure
     public sealed class ColumnWidthConverter : IValueConverter
     {
         public double MinItemWidth { get; set; } = 420;
+        public int MaxColumns { get; set; } = 2;
 
         public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
@@ -14,6 +15,8 @@ namespace JapaneseVerbConjugation.AvaloniaUI.Infrastructure
                 return MinItemWidth;
 
             var columns = Math.Max(1, (int)Math.Floor(totalWidth / MinItemWidth));
+            if (MaxColumns > 0)
+                columns = Math.Min(columns, MaxColumns);
             return Math.Floor(totalWidth / columns);
         }
 
